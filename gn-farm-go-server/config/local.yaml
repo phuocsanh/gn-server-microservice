@@ -1,0 +1,32 @@
+server:
+  port: 8082
+  mode: dev
+postgres:
+  host: postgres_gn_farm
+  port: 5432
+  username: postgres
+  password: 123456
+  dbname: GO_GN_FARM
+  maxIdleConns: 10
+  maxOpenConns: 100
+  connMaxLifetime: 3600
+
+redis:
+  host: redis_gn_farm # 127.0.0.1
+  port: 6379
+  password: # no pw set
+  db: 0 # use default db
+  pool_size: 10 # max connect to redis
+
+logger:
+  log_level: debug
+  file_log_name: "./storages/logs/dev.001.log"
+  max_size: 500 # megabytes
+  max_backups: 3
+  max_age: 28 # days
+  compress: true
+
+jwt:
+  TOKEN_HOUR_LIFESPAN: 1
+  JWT_EXPIRATION: 1h
+  API_SECRET_KEY: "xxx.yyy.zzz"

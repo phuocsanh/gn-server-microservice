@@ -1,0 +1,34 @@
+### Login with the new account
+POST http://localhost:8002/v1/user/login
+Content-Type: application/json
+
+{
+  "userAccount": "phuocsanhtps@gmail.com",
+  "userPassword": "12345678"
+}
+
+### Logout with direct token
+POST http://localhost:8002/v1/user/logout
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhY2Nlc3MiLCJleHAiOjE3NDYxMTYyOTQsImp0aSI6IjNhNDY5YWM5LTgzZWYtNGRkNC1iYjcwLTJlNThiMDY1ODE1ZCIsImlhdCI6MTc0NjExMjY5NCwiaXNzIjoic2hvcGRldmdvIiwic3ViIjoiM2NsaXRva2VuYzlhNzdmZTEtMDk0Zi00MjY1LWI2MWQtODE4NThjYzQyOGY4In0.RSAE9aNxmVYo8_BK4k_NHSr2Ub_U2UYZgT0S7co2w2U
+
+### Setup two-factor authentication
+POST http://localhost:8002/v1/user/two-factor/setup
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhY2Nlc3MiLCJleHAiOjE3NDYxMTYyOTQsImp0aSI6IjNhNDY5YWM5LTgzZWYtNGRkNC1iYjcwLTJlNThiMDY1ODE1ZCIsImlhdCI6MTc0NjExMjY5NCwiaXNzIjoic2hvcGRldmdvIiwic3ViIjoiM2NsaXRva2VuYzlhNzdmZTEtMDk0Zi00MjY1LWI2MWQtODE4NThjYzQyOGY4In0.RSAE9aNxmVYo8_BK4k_NHSr2Ub_U2UYZgT0S7co2w2U
+
+{
+  "userId": 1,
+  "twoFactorAuthType": "EMAIL",
+  "twoFactorEmail": "test@example.com"
+}
+
+### Verify two-factor authentication
+POST http://localhost:8002/v1/user/two-factor/verify
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhY2Nlc3MiLCJleHAiOjE3NDYxMTYyOTQsImp0aSI6IjNhNDY5YWM5LTgzZWYtNGRkNC1iYjcwLTJlNThiMDY1ODE1ZCIsImlhdCI6MTc0NjExMjY5NCwiaXNzIjoic2hvcGRldmdvIiwic3ViIjoiM2NsaXRva2VuYzlhNzdmZTEtMDk0Zi00MjY1LWI2MWQtODE4NThjYzQyOGY4In0.RSAE9aNxmVYo8_BK4k_NHSr2Ub_U2UYZgT0S7co2w2U
+
+{
+  "userId": 1,
+  "twoFactorCode": "123456"
+}

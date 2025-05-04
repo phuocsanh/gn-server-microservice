@@ -1,0 +1,32 @@
+# Common
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Go specific
+docs/
+cmd/cli/
+config/production.yaml
+tmp/
+
+# Node.js specific
+node_modules/
+dist/
+build/
+
+# Environment variables
+.env
+
+# Logs
+logs/
+storages/logs/
+
+# Build output
+bin/

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat File Upload Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .chat-container {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .message-input {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    textarea {
+      width: 100%;
+      height: 80px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      resize: none;
+    }
+    
+    .file-controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #45a049;
+    }
+    
+    .file-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .file-item {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      width: 200px;
+      text-align: center;
+    }
+    
+    .file-icon {
+      width: 50px;
+      height: 50px;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin: 0 auto 10px;
+    }
+    
+    .file-name {
+      font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .login-container {
+      margin-bottom: 20px;
+    }
+    
+    .login-container input {
+      padding: 10px;
+      margin-right: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chat File Upload Example</h1>
+  
+  <div class="login-container">
+    <input type="text" id="tokenInput" placeholder="Enter your JWT token">
+    <input type="text" id="conversationInput" placeholder="Enter conversation ID">
+    <button id="loginButton">Set Credentials</button>
+  </div>
+  
+  <div class="chat-container">
+    <h2>Send Message with Attachments</h2>
+    
+    <div class="message-input">
+      <textarea id="messageInput" placeholder="Type your message here..."></textarea>
+      
+      <div class="file-controls">
+        <input type="file" id="fileInput" multiple>
+        <button id="sendButton">Send Message</button>
+      </div>
+      
+      <div id="filePreview" class="file-preview"></div>
+    </div>
+  </div>
+  
+  <div class="chat-container">
+    <h2>Messages</h2>
+    <div id="messagesContainer"></div>
+  </div>
+  
+  <script>
+    // Function to upload a single file
+    async function uploadFile(file, token) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('http://localhost:3000/api/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to upload file');
+        }
+        
+        return result.data;
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        throw error;
+      }
+    }
+
+    // Function to upload multiple files
+    async function uploadMultipleFiles(files, token) {
+      try {
+        const formData = new FormData();
+        
+        for (let i = 0; i < files.length; i++) {
+          formData.append('files', files[i]);
+        }
+        
+        const response = await fetch('http://localhost:3000/api/files/upload-multiple', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to upload files');
+        }
+        
+        return result.data;
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        throw error;
+      }
+    }
+
+    // Function to send a message with attachments
+    async function sendMessageWithAttachments(conversationId, content, files, token) {
+      try {
+        const formData = new FormData();
+        formData.append('content', content);
+        
+        for (let i = 0; i < files.length; i++) {
+          formData.append('files', files[i]);
+        }
+        
+        const response = await fetch(`http://localhost:3000/api/chat/conversations/${conversationId}/messages/with-attachments`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to send message with attachments');
+        }
+        
+        return result.data;
+      } catch (error) {
+        console.error('Error sending message with attachments:', error);
+        throw error;
+      }
+    }
+    
+    // Function to get messages for a conversation
+    async function getMessages(conversationId, token) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/chat/conversations/${conversationId}/messages`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to get messages');
+        }
+        
+        return result.data;
+      } catch (error) {
+        console.error('Error getting messages:', error);
+        throw error;
+      }
+    }
+    
+    // Function to render a message
+    function renderMessage(message) {
+      const messageElement = document.createElement('div');
+      messageElement.className = 'message';
+      messageElement.style.margin = '10px 0';
+      messageElement.style.padding = '10px';
+      messageElement.style.borderRadius = '5px';
+      messageElement.style.backgroundColor = '#f0f0f0';
+      
+      const senderElement = document.createElement('div');
+      senderElement.style.fontWeight = 'bold';
+      senderElement.textContent = `Sender: ${message.sender}`;
+      messageElement.appendChild(senderElement);
+      
+      const contentElement = document.createElement('div');
+      contentElement.style.margin = '5px 0';
+      contentElement.textContent = message.content;
+      messageElement.appendChild(contentElement);
+      
+      if (message.attachments && message.attachments.length > 0) {
+        const attachmentsElement = document.createElement('div');
+        attachmentsElement.style.display = 'flex';
+        attachmentsElement.style.flexWrap = 'wrap';
+        attachmentsElement.style.gap = '10px';
+        attachmentsElement.style.marginTop = '10px';
+        
+        message.attachments.forEach(attachment => {
+          const attachmentElement = document.createElement('div');
+          attachmentElement.style.width = '150px';
+          attachmentElement.style.textAlign = 'center';
+          
+          if (attachment.fileType === 'image') {
+            const img = document.createElement('img');
+            img.src = attachment.url;
+            img.alt = attachment.originalName || 'Image';
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '5px';
+            attachmentElement.appendChild(img);
+          } else if (attachment.fileType === 'video') {
+            const video = document.createElement('video');
+            video.src = attachment.url;
+            video.controls = true;
+            video.style.maxWidth = '100%';
+            video.style.borderRadius = '5px';
+            attachmentElement.appendChild(video);
+          } else if (attachment.fileType === 'audio') {
+            const audio = document.createElement('audio');
+            audio.src = attachment.url;
+            audio.controls = true;
+            audio.style.width = '100%';
+            attachmentElement.appendChild(audio);
+          } else {
+            const fileLink = document.createElement('a');
+            fileLink.href = attachment.url;
+            fileLink.target = '_blank';
+            fileLink.textContent = attachment.originalName || 'Download file';
+            fileLink.style.display = 'block';
+            fileLink.style.padding = '10px';
+            fileLink.style.backgroundColor = '#ddd';
+            fileLink.style.borderRadius = '5px';
+            fileLink.style.textDecoration = 'none';
+            fileLink.style.color = '#333';
+            attachmentElement.appendChild(fileLink);
+          }
+          
+          attachmentsElement.appendChild(attachmentElement);
+        });
+        
+        messageElement.appendChild(attachmentsElement);
+      }
+      
+      const timeElement = document.createElement('div');
+      timeElement.style.fontSize = '12px';
+      timeElement.style.color = '#666';
+      timeElement.textContent = new Date(message.createdAt).toLocaleString();
+      messageElement.appendChild(timeElement);
+      
+      return messageElement;
+    }
+    
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+      let token = localStorage.getItem('chatToken');
+      let conversationId = localStorage.getItem('chatConversationId');
+      
+      const tokenInput = document.getElementById('tokenInput');
+      const conversationInput = document.getElementById('conversationInput');
+      const loginButton = document.getElementById('loginButton');
+      
+      if (token) tokenInput.value = token;
+      if (conversationId) conversationInput.value = conversationId;
+      
+      // Set credentials
+      loginButton.addEventListener('click', () => {
+        token = tokenInput.value.trim();
+        conversationId = conversationInput.value.trim();
+        
+        if (!token || !conversationId) {
+          alert('Please enter both token and conversation ID');
+          return;
+        }
+        
+        localStorage.setItem('chatToken', token);
+        localStorage.setItem('chatConversationId', conversationId);
+        
+        alert('Credentials set successfully');
+        
+        // Load messages
+        loadMessages();
+      });
+      
+      // File input change handler
+      document.getElementById('fileInput').addEventListener('change', async (event) => {
+        const files = event.target.files;
+        if (files.length === 0) return;
+        
+        const filePreviewContainer = document.getElementById('filePreview');
+        filePreviewContainer.innerHTML = '';
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const fileElement = document.createElement('div');
+          fileElement.className = 'file-item';
+          
+          if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.alt = file.name;
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '150px';
+            fileElement.appendChild(img);
+          } else if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.src = URL.createObjectURL(file);
+            video.controls = true;
+            video.style.maxWidth = '100%';
+            video.style.maxHeight = '150px';
+            fileElement.appendChild(video);
+          } else {
+            const icon = document.createElement('div');
+            icon.className = 'file-icon';
+            icon.textContent = file.name.charAt(0).toUpperCase();
+            fileElement.appendChild(icon);
+          }
+          
+          const fileName = document.createElement('div');
+          fileName.className = 'file-name';
+          fileName.textContent = file.name;
+          fileElement.appendChild(fileName);
+          
+          filePreviewContainer.appendChild(fileElement);
+        }
+      });
+      
+      // Send message with attachments
+      document.getElementById('sendButton').addEventListener('click', async () => {
+        if (!token || !conversationId) {
+          alert('Please set your credentials first');
+          return;
+        }
+        
+        const content = document.getElementById('messageInput').value;
+        const files = document.getElementById('fileInput').files;
+        
+        if (!content && files.length === 0) {
+          alert('Please enter a message or select files to send');
+          return;
+        }
+        
+        try {
+          const message = await sendMessageWithAttachments(conversationId, content, files, token);
+          
+          // Clear input fields
+          document.getElementById('messageInput').value = '';
+          document.getElementById('fileInput').value = '';
+          document.getElementById('filePreview').innerHTML = '';
+          
+          // Display sent message
+          console.log('Message sent:', message);
+          
+          // Reload messages
+          loadMessages();
+          
+        } catch (error) {
+          alert('Error sending message: ' + error.message);
+        }
+      });
+      
+      // Load messages
+      async function loadMessages() {
+        if (!token || !conversationId) return;
+        
+        try {
+          const messages = await getMessages(conversationId, token);
+          const messagesContainer = document.getElementById('messagesContainer');
+          messagesContainer.innerHTML = '';
+          
+          if (messages.length === 0) {
+            messagesContainer.textContent = 'No messages yet';
+            return;
+          }
+          
+          messages.forEach(message => {
+            const messageElement = renderMessage(message);
+            messagesContainer.appendChild(messageElement);
+          });
+          
+          // Scroll to bottom
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          
+        } catch (error) {
+          console.error('Error loading messages:', error);
+          document.getElementById('messagesContainer').textContent = 'Error loading messages';
+        }
+      }
+      
+      // Initial load
+      if (token && conversationId) {
+        loadMessages();
+      }
+    });
+  </script>
+</body>
+</html>

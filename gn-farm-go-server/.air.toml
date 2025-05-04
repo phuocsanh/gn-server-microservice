@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go mod download && swag init -g ./cmd/server/main.go -o ./cmd/swag/docs && go build -o tmp/main ./cmd/server"
+  bin = "tmp/main"
+  full_bin = "tmp/main"
+  delay = 1000
+  exclude_dir = ["tmp", "vendor", "cmd/swag/docs"]
+  include_dir = ["."]
+  include_ext = ["go"]
+  exclude_ext = []
+
+[poll]
+  enabled = true
+  interval = "1s"

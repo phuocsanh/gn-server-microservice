@@ -1,0 +1,94 @@
+### Register a new user
+POST http://localhost:8002/v1/user/register
+Content-Type: application/json
+
+{
+  "verifyKey": "test@example.com",
+  "verifyType": 1,
+  "verifyPurpose": "TEST_USER"
+}
+
+### Thiết lập biến mặc định
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhY2Nlc3MiLCJleHAiOjE3NDYxMTYyOTQsImp0aSI6IjNhNDY5YWM5LTgzZWYtNGRkNC1iYjcwLTJlNThiMDY1ODE1ZCIsImlhdCI6MTc0NjExMjY5NCwiaXNzIjoic2hvcGRldmdvIiwic3ViIjoiM2NsaXRva2VuYzlhNzdmZTEtMDk0Zi00MjY1LWI2MWQtODE4NThjYzQyOGY4In0.RSAE9aNxmVYo8_BK4k_NHSr2Ub_U2UYZgT0S7co2w2U
+@refresh_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJyZWZyZXNoIiwiZXhwIjoxNzQ2NzE3NDk0LCJqdGkiOiIyZjhlYTBmNi02ODg4LTRjN2MtYTViNC1lNWYxYjU3ZDFkZjgiLCJpYXQiOjE3NDYxMTI2OTQsImlzcyI6InNob3BkZXZnbyIsInN1YiI6IjNjbGl0b2tlbmM5YTc3ZmUxLTA5NGYtNDI2NS1iNjFkLTgxODU4Y2M0MjhmOCJ9.9HPuF5Pt3y0Recpbf3aN0uE9LMSlUIOgxPpcrVyR8_Y
+
+###
+
+# Verify OTP and get token
+# @name verifyOtp
+POST http://localhost:8002/v1/user/verify-otp
+Content-Type: application/json
+
+{
+  "verifyKey": "phuocsanhtps@gmail.com",
+  "verifyCode": "123456"
+}
+
+> {%
+    client.global.set("verify_token", response.body.data.verifyToken);
+%}
+
+### Update password after registration
+# This request uses the verify_token from the previous verify OTP response
+POST http://localhost:8002/v1/user/update-pass-register
+Content-Type: application/json
+
+{
+  "userToken": "{{verify_token}}",
+  "userPassword": "Password123!"
+}
+
+### Login with the new account
+# @name login
+POST http://localhost:8002/v1/user/login
+Content-Type: application/json
+
+{
+  "userAccount": "phuocsanhtps@gmail.com",
+  "userPassword": "12345678"
+}
+
+> {%
+    client.global.set("access_token", response.body.data.tokens.accessToken);
+    client.global.set("refresh_token", response.body.data.tokens.refreshToken);
+%}
+
+### Refresh token to get new access token
+POST http://localhost:8002/v1/user/refresh-token
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refresh_token}}"
+}
+
+> {%
+    client.global.set("access_token", response.body.data.tokens.accessToken);
+    client.global.set("refresh_token", response.body.data.tokens.refreshToken);
+%}
+
+### Logout
+# Sử dụng token từ đăng nhập
+POST http://localhost:8002/v1/user/logout
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+### Setup two-factor authentication
+POST http://localhost:8002/v1/user/two-factor/setup
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "userId": 1,
+  "twoFactorAuthType": "EMAIL",
+  "twoFactorEmail": "test@example.com"
+}
+
+### Verify two-factor authentication
+POST http://localhost:8002/v1/user/two-factor/verify
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "userId": 1,
+  "twoFactorCode": "123456"
+}
