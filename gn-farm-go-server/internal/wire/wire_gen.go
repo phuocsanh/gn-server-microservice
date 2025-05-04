@@ -12,29 +12,47 @@ import (
 	"gn-farm-go-server/global"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
-	"gn-farm-go-server/internal/service/impl"
+	"gn-farm-go-server/internal/service/impl/product"
+	"gn-farm-go-server/internal/service/impl/user"
 )
 
 // Injectors from product.wire.go:
 
 func InitializeProductService(db *database.Queries) service.ProductService {
-	productService := impl.NewProductService(db)
+	productService := product.NewProductService(db)
 	return productService
 }
 
 func InitializeMushroomService(db *database.Queries) service.MushroomService {
-	mushroomService := impl.NewMushroomService(db)
+	mushroomService := product.NewMushroomService(db)
 	return mushroomService
 }
 
 func InitializeVegetableService(db *database.Queries) service.VegetableService {
-	vegetableService := impl.NewVegetableService(db)
+	vegetableService := product.NewVegetableService(db)
 	return vegetableService
 }
 
 func InitializeBonsaiService(db *database.Queries) service.BonsaiService {
-	bonsaiService := impl.NewBonsaiService(db)
+	bonsaiService := product.NewBonsaiService(db)
 	return bonsaiService
+}
+
+// Injectors from product_type.wire.go:
+
+func InitializeProductTypeService(db *database.Queries) service.ProductTypeService {
+	productTypeService := product.NewProductTypeService(db)
+	return productTypeService
+}
+
+func InitializeProductSubtypeService(db *database.Queries) service.ProductSubtypeService {
+	productSubtypeService := product.NewProductSubtypeService(db)
+	return productSubtypeService
+}
+
+func InitializeProductSubtypeRelationService(db *database.Queries) service.ProductSubtypeRelationService {
+	productSubtypeRelationService := product.NewProductSubtypeRelationService(db)
+	return productSubtypeRelationService
 }
 
 // Injectors from user.wire.go:
@@ -46,13 +64,17 @@ func InitializeBonsaiService(db *database.Queries) service.BonsaiService {
 func InitUserLoginService() (service.IUserLogin, error) {
 	db := NewPostgresDB()
 	queries := database.New(db)
-	sUserLogin := impl.NewUserLoginImpl(queries)
+	sUserLogin := user.NewUserLoginImpl(queries)
 	return sUserLogin, nil
 }
 
 // product.wire.go:
 
-var productSet = wire.NewSet(impl.NewProductService, impl.NewMushroomService, impl.NewVegetableService, impl.NewBonsaiService)
+var productSet = wire.NewSet(product.NewProductService, product.NewMushroomService, product.NewVegetableService, product.NewBonsaiService)
+
+// product_type.wire.go:
+
+var productTypeSet = wire.NewSet(product.NewProductTypeService, product.NewProductSubtypeService, product.NewProductSubtypeRelationService)
 
 // user.wire.go:
 
@@ -62,7 +84,7 @@ var dbProviderSet = wire.NewSet(
 )
 
 // Service provider set for User Login
-var userLoginServiceSet = wire.NewSet(impl.NewUserLoginImpl, wire.Bind(new(service.IUserLogin), new(*impl.SUserLogin)))
+var userLoginServiceSet = wire.NewSet(user.NewUserLoginImpl, wire.Bind(new(service.IUserLogin), new(*user.SUserLogin)))
 
 // --- Helper function for DB (Example) ---
 // You should have a proper way to provide your DB connection.

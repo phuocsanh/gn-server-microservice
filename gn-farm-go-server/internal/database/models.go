@@ -13,23 +13,38 @@ import (
 )
 
 type Bonsai struct {
-	ID          int32
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID        int32
+	Name      sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Stores metadata for chat conversations
+type ChatConversation struct {
+	ConversationID   string
+	ConversationType string
+	ConversationName sql.NullString
+	CreatedBy        int32
+	IsActive         sql.NullBool
+	CreatedAt        sql.NullTime
+	UpdatedAt        sql.NullTime
+}
+
+// Stores participants of chat conversations
+type ChatParticipant struct {
+	ID             int32
+	ConversationID string
+	UserID         int32
+	Role           sql.NullString
+	JoinedAt       sql.NullTime
+	LeftAt         sql.NullTime
 }
 
 type Mushroom struct {
-	ID          int32
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID        int32
+	Name      sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // pre_go_acc_user_base_9999
@@ -135,12 +150,37 @@ type Product struct {
 	UpdatedAt              time.Time
 }
 
+type ProductSubtype struct {
+	ID          int32
+	Name        string
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type ProductSubtypeMapping struct {
+	ProductTypeID    int32
+	ProductSubtypeID int32
+	CreatedAt        time.Time
+}
+
+type ProductSubtypeRelation struct {
+	ProductID        int32
+	ProductSubtypeID int32
+	CreatedAt        time.Time
+}
+
+type ProductType struct {
+	ID          int32
+	Name        string
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type Vegetable struct {
-	ID           int32
-	ProductShop  int32
-	Manufacturer sql.NullString
-	Model        sql.NullString
-	Color        sql.NullString
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID        int32
+	Name      sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

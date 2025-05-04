@@ -12,38 +12,20 @@ import (
 
 const createVegetable = `-- name: CreateVegetable :one
 INSERT INTO vegetables (
-    product_shop,
-    manufacturer,
-    model,
-    color,
+    name,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, NOW(), NOW()
-) RETURNING id, product_shop, manufacturer, model, color, created_at, updated_at
+    $1, NOW(), NOW()
+) RETURNING id, name, created_at, updated_at
 `
 
-type CreateVegetableParams struct {
-	ProductShop  int32
-	Manufacturer sql.NullString
-	Model        sql.NullString
-	Color        sql.NullString
-}
-
-func (q *Queries) CreateVegetable(ctx context.Context, arg CreateVegetableParams) (Vegetable, error) {
-	row := q.db.QueryRowContext(ctx, createVegetable,
-		arg.ProductShop,
-		arg.Manufacturer,
-		arg.Model,
-		arg.Color,
-	)
+func (q *Queries) CreateVegetable(ctx context.Context, name sql.NullString) (Vegetable, error) {
+	row := q.db.QueryRowContext(ctx, createVegetable, name)
 	var i Vegetable
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Manufacturer,
-		&i.Model,
-		&i.Color,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -60,7 +42,7 @@ func (q *Queries) DeleteVegetable(ctx context.Context, id int32) error {
 }
 
 const getVegetable = `-- name: GetVegetable :one
-SELECT id, product_shop, manufacturer, model, color, created_at, updated_at FROM vegetables WHERE id = $1
+SELECT id, name, created_at, updated_at FROM vegetables WHERE id = $1
 `
 
 func (q *Queries) GetVegetable(ctx context.Context, id int32) (Vegetable, error) {
@@ -68,10 +50,7 @@ func (q *Queries) GetVegetable(ctx context.Context, id int32) (Vegetable, error)
 	var i Vegetable
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Manufacturer,
-		&i.Model,
-		&i.Color,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,39 +59,24 @@ func (q *Queries) GetVegetable(ctx context.Context, id int32) (Vegetable, error)
 
 const updateVegetable = `-- name: UpdateVegetable :one
 UPDATE vegetables
-SET 
-    product_shop = $2,
-    manufacturer = $3,
-    model = $4,
-    color = $5,
+SET
+    name = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_shop, manufacturer, model, color, created_at, updated_at
+RETURNING id, name, created_at, updated_at
 `
 
 type UpdateVegetableParams struct {
-	ID           int32
-	ProductShop  int32
-	Manufacturer sql.NullString
-	Model        sql.NullString
-	Color        sql.NullString
+	ID   int32
+	Name sql.NullString
 }
 
 func (q *Queries) UpdateVegetable(ctx context.Context, arg UpdateVegetableParams) (Vegetable, error) {
-	row := q.db.QueryRowContext(ctx, updateVegetable,
-		arg.ID,
-		arg.ProductShop,
-		arg.Manufacturer,
-		arg.Model,
-		arg.Color,
-	)
+	row := q.db.QueryRowContext(ctx, updateVegetable, arg.ID, arg.Name)
 	var i Vegetable
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Manufacturer,
-		&i.Model,
-		&i.Color,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

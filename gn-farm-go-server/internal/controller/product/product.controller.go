@@ -2,6 +2,7 @@ package product
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
@@ -10,25 +11,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ProductRequest represents a request to create a product
-// @Description Product creation request
-type ProductRequest struct {
-	ProductName        string `json:"product_name" example:"Organic Tomato"`
-	ProductPrice       string `json:"product_price" example:"15.99"`
-	ProductThumb       string `json:"product_thumb" example:"https://example.com/tomato.jpg"`
-	ProductDescription string `json:"product_description" example:"Fresh organic tomatoes"`
-	ProductQuantity    int    `json:"product_quantity" example:"100"`
-	ProductType        string `json:"product_type" example:"vegetable"`
+// CreateProductRequest represents a request to create a product with all fields
+// @Description Product creation request with all fields
+type CreateProductRequest struct {
+	ProductName            string          `json:"productName" example:"Organic Tomato"`
+	ProductPrice           string          `json:"productPrice" example:"15.99"`
+	ProductStatus          *int32          `json:"productStatus,omitempty" example:"1"`
+	ProductThumb           string          `json:"productThumb" example:"https://example.com/tomato.jpg"`
+	ProductPictures        []string        `json:"productPictures"`
+	ProductVideos          []string        `json:"productVideos"`
+	ProductDescription     *string         `json:"productDescription,omitempty" example:"Fresh organic tomatoes"`
+	ProductQuantity        *int32          `json:"productQuantity,omitempty" example:"100"`
+	ProductType            int32           `json:"productType" example:"1"`
+	SubProductType         []int32         `json:"subProductType" example:"[1,2]"`
+	Discount               *string         `json:"discount,omitempty" example:"10"`
+	ProductDiscountedPrice string          `json:"productDiscountedPrice" example:"14.39"`
+	ProductAttributes      json.RawMessage `json:"productAttributes"`
+	IsDraft                bool            `json:"isDraft" example:"false"`
+	IsPublished            bool            `json:"isPublished" example:"true"`
 }
 
-// ProductUpdateRequest represents a request to update a product
-// @Description Product update request
-type ProductUpdateRequest struct {
-	ProductName        string `json:"product_name" example:"Organic Tomato Premium"`
-	ProductPrice       string `json:"product_price" example:"19.99"`
-	ProductThumb       string `json:"product_thumb" example:"https://example.com/tomato-premium.jpg"`
-	ProductDescription string `json:"product_description" example:"Premium organic tomatoes"`
-	ProductQuantity    int    `json:"product_quantity" example:"50"`
+// UpdateProductRequest represents a request to update a product with all fields
+// @Description Product update request with all fields
+type UpdateProductRequest struct {
+	ProductName            string          `json:"productName" example:"Organic Tomato Premium"`
+	ProductPrice           string          `json:"productPrice" example:"19.99"`
+	ProductStatus          *int32          `json:"productStatus,omitempty" example:"1"`
+	ProductThumb           string          `json:"productThumb" example:"https://example.com/tomato-premium.jpg"`
+	ProductPictures        []string        `json:"productPictures"`
+	ProductVideos          []string        `json:"productVideos"`
+	ProductDescription     *string         `json:"productDescription,omitempty" example:"Premium organic tomatoes"`
+	ProductQuantity        *int32          `json:"productQuantity,omitempty" example:"50"`
+	ProductType            int32           `json:"productType" example:"1"`
+	SubProductType         []int32         `json:"subProductType" example:"[1,2]"`
+	Discount               *string         `json:"discount,omitempty" example:"15"`
+	ProductDiscountedPrice string          `json:"productDiscountedPrice" example:"16.99"`
+	ProductAttributes      json.RawMessage `json:"productAttributes"`
+	IsDraft                bool            `json:"isDraft" example:"false"`
+	IsPublished            bool            `json:"isPublished" example:"true"`
 }
 
 // BulkUpdateRequest represents a request to update multiple products
@@ -41,70 +61,17 @@ type BulkUpdateRequest struct {
 // @Description Product update item
 type ProductUpdateItem struct {
 	ID          int    `json:"id" example:"1"`
-	ProductName string `json:"product_name" example:"Updated Product 1"`
-	ProductPrice string `json:"product_price" example:"29.99"`
+	ProductName string `json:"productName" example:"Updated Product 1"`
+	ProductPrice string `json:"productPrice" example:"29.99"`
 }
 
-// MushroomRequest represents a request to create a mushroom
-// @Description Mushroom creation request
-type MushroomRequest struct {
-	MushroomName        string `json:"mushroom_name" example:"Shiitake Mushroom"`
-	MushroomType        string `json:"mushroom_type" example:"Edible"`
-	MushroomDescription string `json:"mushroom_description" example:"Popular culinary mushroom"`
-	MushroomPrice       string `json:"mushroom_price" example:"12.99"`
-	MushroomQuantity    int    `json:"mushroom_quantity" example:"50"`
-}
-
-// MushroomUpdateRequest represents a request to update a mushroom
-// @Description Mushroom update request
-type MushroomUpdateRequest struct {
-	MushroomName        string `json:"mushroom_name" example:"Premium Shiitake"`
-	MushroomDescription string `json:"mushroom_description" example:"Premium quality shiitake mushrooms"`
-	MushroomPrice       string `json:"mushroom_price" example:"15.99"`
-}
-
-// VegetableRequest represents a request to create a vegetable
-// @Description Vegetable creation request
-type VegetableRequest struct {
-	VegetableName        string `json:"vegetable_name" example:"Organic Spinach"`
-	VegetableType        string `json:"vegetable_type" example:"Leafy Green"`
-	VegetableDescription string `json:"vegetable_description" example:"Fresh organic spinach"`
-	VegetablePrice       string `json:"vegetable_price" example:"8.99"`
-	VegetableQuantity    int    `json:"vegetable_quantity" example:"100"`
-}
-
-// VegetableUpdateRequest represents a request to update a vegetable
-// @Description Vegetable update request
-type VegetableUpdateRequest struct {
-	VegetableName        string `json:"vegetable_name" example:"Premium Spinach"`
-	VegetableDescription string `json:"vegetable_description" example:"Premium quality organic spinach"`
-	VegetablePrice       string `json:"vegetable_price" example:"10.99"`
-}
-
-// BonsaiRequest represents a request to create a bonsai
-// @Description Bonsai creation request
-type BonsaiRequest struct {
-	BonsaiName        string `json:"bonsai_name" example:"Japanese Maple Bonsai"`
-	BonsaiType        string `json:"bonsai_type" example:"Deciduous"`
-	BonsaiDescription string `json:"bonsai_description" example:"Beautiful Japanese maple bonsai tree"`
-	BonsaiPrice       string `json:"bonsai_price" example:"89.99"`
-	BonsaiAge         int    `json:"bonsai_age" example:"5"`
-	BonsaiHeight      int    `json:"bonsai_height" example:"25"`
-}
-
-// BonsaiUpdateRequest represents a request to update a bonsai
-// @Description Bonsai update request
-type BonsaiUpdateRequest struct {
-	BonsaiName        string `json:"bonsai_name" example:"Premium Japanese Maple"`
-	BonsaiDescription string `json:"bonsai_description" example:"Premium quality Japanese maple bonsai"`
-	BonsaiPrice       string `json:"bonsai_price" example:"99.99"`
-}
+// Các struct request cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
+// vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 
 var (
-	Product   = new(productController)
-	Mushroom  = new(mushroomController)
-	Vegetable = new(vegetableController)
-	Bonsai    = new(bonsaiController)
+	Product = new(productController)
+	// Các controller cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
+	// vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 )
 
 type productController struct{}
@@ -115,16 +82,48 @@ type productController struct{}
 // @Tags         product management
 // @Accept       json
 // @Produce      json
-// @Param        payload body ProductRequest true "Product details"
+// @Param        payload body CreateProductRequest true "Product details"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product [post]
 func (c *productController) CreateProduct(ctx *gin.Context) {
-	var params database.CreateProductParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	var req CreateProductRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
+	}
+
+	// Convert from request to database params
+	params := database.CreateProductParams{
+		ProductName:            req.ProductName,
+		ProductPrice:           req.ProductPrice,
+		ProductThumb:           req.ProductThumb,
+		ProductPictures:        req.ProductPictures,
+		ProductVideos:          req.ProductVideos,
+		ProductType:            req.ProductType,
+		SubProductType:         req.SubProductType,
+		ProductDiscountedPrice: req.ProductDiscountedPrice,
+		ProductAttributes:      req.ProductAttributes,
+		IsDraft:                sql.NullBool{Bool: req.IsDraft, Valid: true},
+		IsPublished:            sql.NullBool{Bool: req.IsPublished, Valid: true},
+	}
+
+	// Handle optional fields
+	if req.ProductStatus != nil {
+		params.ProductStatus = sql.NullInt32{Int32: *req.ProductStatus, Valid: true}
+	}
+
+	if req.ProductDescription != nil {
+		params.ProductDescription = sql.NullString{String: *req.ProductDescription, Valid: true}
+	}
+
+	if req.ProductQuantity != nil {
+		params.ProductQuantity = sql.NullInt32{Int32: *req.ProductQuantity, Valid: true}
+	}
+
+	if req.Discount != nil {
+		params.Discount = sql.NullString{String: *req.Discount, Valid: true}
 	}
 
 	product, err := service.Product.CreateProduct(ctx, &params)
@@ -202,15 +201,15 @@ func (c *productController) ListProducts(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Product ID" example:1
-// @Param        payload body ProductUpdateRequest true "Updated product details"
+// @Param        payload body UpdateProductRequest true "Updated product details"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      404  {object}  response.ErrorResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [put]
 func (c *productController) UpdateProduct(ctx *gin.Context) {
-	var params database.UpdateProductParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	var req UpdateProductRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
@@ -220,7 +219,39 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
-	params.ID = id
+
+	// Convert from request to database params
+	params := database.UpdateProductParams{
+		ID:                     id,
+		ProductName:            req.ProductName,
+		ProductPrice:           req.ProductPrice,
+		ProductThumb:           req.ProductThumb,
+		ProductPictures:        req.ProductPictures,
+		ProductVideos:          req.ProductVideos,
+		ProductType:            req.ProductType,
+		SubProductType:         req.SubProductType,
+		ProductDiscountedPrice: req.ProductDiscountedPrice,
+		ProductAttributes:      req.ProductAttributes,
+		IsDraft:                sql.NullBool{Bool: req.IsDraft, Valid: true},
+		IsPublished:            sql.NullBool{Bool: req.IsPublished, Valid: true},
+	}
+
+	// Handle optional fields
+	if req.ProductStatus != nil {
+		params.ProductStatus = sql.NullInt32{Int32: *req.ProductStatus, Valid: true}
+	}
+
+	if req.ProductDescription != nil {
+		params.ProductDescription = sql.NullString{String: *req.ProductDescription, Valid: true}
+	}
+
+	if req.ProductQuantity != nil {
+		params.ProductQuantity = sql.NullInt32{Int32: *req.ProductQuantity, Valid: true}
+	}
+
+	if req.Discount != nil {
+		params.Discount = sql.NullString{String: *req.Discount, Valid: true}
+	}
 
 	product, err := service.Product.UpdateProduct(ctx, &params)
 	if err != nil {
@@ -298,11 +329,11 @@ func (c *productController) SearchProducts(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        category query string false "Product category" example:"vegetable"
-// @Param        min_price query number false "Minimum price" example:10.00
-// @Param        max_price query number false "Maximum price" example:50.00
-// @Param        in_stock query boolean false "In stock status" example:true
-// @Param        sort_by query string false "Sort field" Enums(price, name, created_at) example:"price"
-// @Param        sort_order query string false "Sort direction" Enums(asc, desc) example:"asc"
+// @Param        minPrice query number false "Minimum price" example:10.00
+// @Param        maxPrice query number false "Maximum price" example:50.00
+// @Param        inStock query boolean false "In stock status" example:true
+// @Param        sortBy query string false "Sort field" Enums(price, name, created_at) example:"price"
+// @Param        sortOrder query string false "Sort direction" Enums(asc, desc) example:"asc"
 // @Param        limit query int true "Number of items to return" minimum(1) maximum(100) example:10
 // @Param        offset query int false "Number of items to skip" minimum(0) default(0) example:0
 // @Success      200  {object}  response.ResponseData
@@ -312,11 +343,11 @@ func (c *productController) SearchProducts(ctx *gin.Context) {
 func (c *productController) FilterProducts(ctx *gin.Context) {
 	var params struct {
 		Category    *string  `form:"category"`
-		MinPrice    *float64 `form:"min_price"`
-		MaxPrice    *float64 `form:"max_price"`
-		InStock     *bool    `form:"in_stock"`
-		SortBy      string   `form:"sort_by" binding:"omitempty,oneof=price name created_at"`
-		SortOrder   string   `form:"sort_order" binding:"omitempty,oneof=asc desc"`
+		MinPrice    *float64 `form:"minPrice"`
+		MaxPrice    *float64 `form:"maxPrice"`
+		InStock     *bool    `form:"inStock"`
+		SortBy      string   `form:"sortBy" binding:"omitempty,oneof=price name created_at"`
+		SortOrder   string   `form:"sortOrder" binding:"omitempty,oneof=asc desc"`
 		Limit       int32    `form:"limit" binding:"required,min=1,max=100"`
 		Offset      int32    `form:"offset" binding:"min=0"`
 	}
@@ -430,362 +461,5 @@ func (c *productController) BulkUpdateProducts(ctx *gin.Context) {
 	response.SuccessResponse(ctx, response.ErrCodeSuccess, results)
 }
 
-type mushroomController struct{}
-
-// CreateMushroom creates a new mushroom product
-// @Summary      Create a new mushroom
-// @Description  Create a new mushroom product with the provided details
-// @Tags         mushroom management
-// @Accept       json
-// @Produce      json
-// @Param        payload body MushroomRequest true "Mushroom details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/mushroom [post]
-func (c *mushroomController) CreateMushroom(ctx *gin.Context) {
-	var params database.CreateMushroomParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	mushroom, err := service.Mushroom.CreateMushroom(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, mushroom)
-}
-
-// GetMushroom retrieves a mushroom by ID
-// @Summary      Get a mushroom by ID
-// @Description  Get detailed information about a mushroom by its ID
-// @Tags         mushroom management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Mushroom ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/mushroom/{id} [get]
-func (c *mushroomController) GetMushroom(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	mushroom, err := service.Mushroom.GetMushroom(ctx, id)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, mushroom)
-}
-
-// UpdateMushroom updates an existing mushroom
-// @Summary      Update a mushroom
-// @Description  Update an existing mushroom with the provided details
-// @Tags         mushroom management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Mushroom ID" example:1
-// @Param        payload body MushroomUpdateRequest true "Updated mushroom details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/mushroom/{id} [put]
-func (c *mushroomController) UpdateMushroom(ctx *gin.Context) {
-	var params database.UpdateMushroomParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-	params.ID = id
-
-	mushroom, err := service.Mushroom.UpdateMushroom(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, mushroom)
-}
-
-// DeleteMushroom deletes a mushroom
-// @Summary      Delete a mushroom
-// @Description  Delete a mushroom by its ID
-// @Tags         mushroom management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Mushroom ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/mushroom/{id} [delete]
-func (c *mushroomController) DeleteMushroom(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	if err := service.Mushroom.DeleteMushroom(ctx, id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
-}
-
-type vegetableController struct{}
-
-// CreateVegetable creates a new vegetable product
-// @Summary      Create a new vegetable
-// @Description  Create a new vegetable product with the provided details
-// @Tags         vegetable management
-// @Accept       json
-// @Produce      json
-// @Param        payload body VegetableRequest true "Vegetable details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/vegetable [post]
-func (c *vegetableController) CreateVegetable(ctx *gin.Context) {
-	var params database.CreateVegetableParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	vegetable, err := service.Vegetable.CreateVegetable(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, vegetable)
-}
-
-// GetVegetable retrieves a vegetable by ID
-// @Summary      Get a vegetable by ID
-// @Description  Get detailed information about a vegetable by its ID
-// @Tags         vegetable management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Vegetable ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/vegetable/{id} [get]
-func (c *vegetableController) GetVegetable(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	vegetable, err := service.Vegetable.GetVegetable(ctx, id)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, vegetable)
-}
-
-// UpdateVegetable updates an existing vegetable
-// @Summary      Update a vegetable
-// @Description  Update an existing vegetable with the provided details
-// @Tags         vegetable management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Vegetable ID" example:1
-// @Param        payload body VegetableUpdateRequest true "Updated vegetable details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/vegetable/{id} [put]
-func (c *vegetableController) UpdateVegetable(ctx *gin.Context) {
-	var params database.UpdateVegetableParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-	params.ID = id
-
-	vegetable, err := service.Vegetable.UpdateVegetable(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, vegetable)
-}
-
-// DeleteVegetable deletes a vegetable
-// @Summary      Delete a vegetable
-// @Description  Delete a vegetable by its ID
-// @Tags         vegetable management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Vegetable ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/vegetable/{id} [delete]
-func (c *vegetableController) DeleteVegetable(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	if err := service.Vegetable.DeleteVegetable(ctx, id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
-}
-
-type bonsaiController struct{}
-
-// CreateBonsai creates a new bonsai product
-// @Summary      Create a new bonsai
-// @Description  Create a new bonsai product with the provided details
-// @Tags         bonsai management
-// @Accept       json
-// @Produce      json
-// @Param        payload body BonsaiRequest true "Bonsai details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/bonsai [post]
-func (c *bonsaiController) CreateBonsai(ctx *gin.Context) {
-	var params database.CreateBonsaiParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	bonsai, err := service.Bonsai.CreateBonsai(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, bonsai)
-}
-
-// GetBonsai retrieves a bonsai by ID
-// @Summary      Get a bonsai by ID
-// @Description  Get detailed information about a bonsai by its ID
-// @Tags         bonsai management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Bonsai ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/bonsai/{id} [get]
-func (c *bonsaiController) GetBonsai(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	bonsai, err := service.Bonsai.GetBonsai(ctx, id)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, bonsai)
-}
-
-// UpdateBonsai updates an existing bonsai
-// @Summary      Update a bonsai
-// @Description  Update an existing bonsai with the provided details
-// @Tags         bonsai management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Bonsai ID" example:1
-// @Param        payload body BonsaiUpdateRequest true "Updated bonsai details"
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/bonsai/{id} [put]
-func (c *bonsaiController) UpdateBonsai(ctx *gin.Context) {
-	var params database.UpdateBonsaiParams
-	if err := ctx.ShouldBindJSON(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-	params.ID = id
-
-	bonsai, err := service.Bonsai.UpdateBonsai(ctx, &params)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, bonsai)
-}
-
-// DeleteBonsai deletes a bonsai
-// @Summary      Delete a bonsai
-// @Description  Delete a bonsai by its ID
-// @Tags         bonsai management
-// @Accept       json
-// @Produce      json
-// @Param        id path int true "Bonsai ID" example:1
-// @Success      200  {object}  response.ResponseData
-// @Failure      400  {object}  response.ErrorResponseData
-// @Failure      404  {object}  response.ErrorResponseData
-// @Failure      500  {object}  response.ErrorResponseData
-// @Router       /product/bonsai/{id} [delete]
-func (c *bonsaiController) DeleteBonsai(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	if err := service.Bonsai.DeleteBonsai(ctx, id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
-	}
-
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
-}
+// Các controller cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
+// vì chúng nên được xử lý như các product_type thông qua ProductTypeController

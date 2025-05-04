@@ -12,38 +12,20 @@ import (
 
 const createBonsai = `-- name: CreateBonsai :one
 INSERT INTO bonsais (
-    product_shop,
-    brand,
-    size,
-    material,
+    name,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, NOW(), NOW()
-) RETURNING id, product_shop, brand, size, material, created_at, updated_at
+    $1, NOW(), NOW()
+) RETURNING id, name, created_at, updated_at
 `
 
-type CreateBonsaiParams struct {
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
-}
-
-func (q *Queries) CreateBonsai(ctx context.Context, arg CreateBonsaiParams) (Bonsai, error) {
-	row := q.db.QueryRowContext(ctx, createBonsai,
-		arg.ProductShop,
-		arg.Brand,
-		arg.Size,
-		arg.Material,
-	)
+func (q *Queries) CreateBonsai(ctx context.Context, name sql.NullString) (Bonsai, error) {
+	row := q.db.QueryRowContext(ctx, createBonsai, name)
 	var i Bonsai
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -60,7 +42,7 @@ func (q *Queries) DeleteBonsai(ctx context.Context, id int32) error {
 }
 
 const getBonsai = `-- name: GetBonsai :one
-SELECT id, product_shop, brand, size, material, created_at, updated_at FROM bonsais WHERE id = $1
+SELECT id, name, created_at, updated_at FROM bonsais WHERE id = $1
 `
 
 func (q *Queries) GetBonsai(ctx context.Context, id int32) (Bonsai, error) {
@@ -68,10 +50,7 @@ func (q *Queries) GetBonsai(ctx context.Context, id int32) (Bonsai, error) {
 	var i Bonsai
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,39 +59,24 @@ func (q *Queries) GetBonsai(ctx context.Context, id int32) (Bonsai, error) {
 
 const updateBonsai = `-- name: UpdateBonsai :one
 UPDATE bonsais
-SET 
-    product_shop = $2,
-    brand = $3,
-    size = $4,
-    material = $5,
+SET
+    name = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_shop, brand, size, material, created_at, updated_at
+RETURNING id, name, created_at, updated_at
 `
 
 type UpdateBonsaiParams struct {
-	ID          int32
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
+	ID   int32
+	Name sql.NullString
 }
 
 func (q *Queries) UpdateBonsai(ctx context.Context, arg UpdateBonsaiParams) (Bonsai, error) {
-	row := q.db.QueryRowContext(ctx, updateBonsai,
-		arg.ID,
-		arg.ProductShop,
-		arg.Brand,
-		arg.Size,
-		arg.Material,
-	)
+	row := q.db.QueryRowContext(ctx, updateBonsai, arg.ID, arg.Name)
 	var i Bonsai
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

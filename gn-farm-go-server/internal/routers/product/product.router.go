@@ -20,14 +20,20 @@ func (pr *ProductRouter) InitProductRouter(Router *gin.RouterGroup) {
 		productRouterPublic.GET("/:id", product.Product.GetProduct)
 		productRouterPublic.GET("", product.Product.ListProducts)
 
-		// Mushroom routes
-		productRouterPublic.GET("/mushroom/:id", product.Mushroom.GetMushroom)
+		// Các route cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
+		// vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 
-		// Vegetable routes
-		productRouterPublic.GET("/vegetable/:id", product.Vegetable.GetVegetable)
+		// Product Type routes
+		productRouterPublic.GET("/type", product.ProductType.ListProductTypes)
+		productRouterPublic.GET("/type/:id", product.ProductType.GetProductType)
+		productRouterPublic.GET("/type/:typeId/subtypes", product.ProductSubtype.ListProductSubtypesByType)
 
-		// Bonsai routes
-		productRouterPublic.GET("/bonsai/:id", product.Bonsai.GetBonsai)
+		// Product Subtype routes
+		productRouterPublic.GET("/subtype", product.ProductSubtype.ListProductSubtypes)
+		productRouterPublic.GET("/subtype/:id", product.ProductSubtype.GetProductSubtype)
+
+		// Product Subtype Relations routes
+		productRouterPublic.GET("/:productId/subtypes", product.ProductSubtypeRelation.GetProductSubtypeRelations)
 	}
 
 	// Private routes (requires authentication)
@@ -40,19 +46,24 @@ func (pr *ProductRouter) InitProductRouter(Router *gin.RouterGroup) {
 		productRouterPrivate.DELETE("/:id", product.Product.DeleteProduct)
 		productRouterPrivate.POST("/bulk-update", product.Product.BulkUpdateProducts)
 
-		// Mushroom routes
-		productRouterPrivate.POST("/mushroom", product.Mushroom.CreateMushroom)
-		productRouterPrivate.PUT("/mushroom/:id", product.Mushroom.UpdateMushroom)
-		productRouterPrivate.DELETE("/mushroom/:id", product.Mushroom.DeleteMushroom)
+		// Các route cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
+		// vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 
-		// Vegetable routes
-		productRouterPrivate.POST("/vegetable", product.Vegetable.CreateVegetable)
-		productRouterPrivate.PUT("/vegetable/:id", product.Vegetable.UpdateVegetable)
-		productRouterPrivate.DELETE("/vegetable/:id", product.Vegetable.DeleteVegetable)
+		// Product Type routes
+		productRouterPrivate.POST("/type", product.ProductType.CreateProductType)
+		productRouterPrivate.PUT("/type/:id", product.ProductType.UpdateProductType)
+		productRouterPrivate.DELETE("/type/:id", product.ProductType.DeleteProductType)
 
-		// Bonsai routes
-		productRouterPrivate.POST("/bonsai", product.Bonsai.CreateBonsai)
-		productRouterPrivate.PUT("/bonsai/:id", product.Bonsai.UpdateBonsai)
-		productRouterPrivate.DELETE("/bonsai/:id", product.Bonsai.DeleteBonsai)
+		// Product Subtype routes
+		productRouterPrivate.POST("/subtype", product.ProductSubtype.CreateProductSubtype)
+		productRouterPrivate.PUT("/subtype/:id", product.ProductSubtype.UpdateProductSubtype)
+		productRouterPrivate.DELETE("/subtype/:id", product.ProductSubtype.DeleteProductSubtype)
+		productRouterPrivate.POST("/subtype/mapping", product.ProductSubtype.AddProductSubtypeMapping)
+		productRouterPrivate.DELETE("/subtype/mapping", product.ProductSubtype.RemoveProductSubtypeMapping)
+
+		// Product Subtype Relations routes
+		productRouterPrivate.POST("/:productId/subtype/:subtypeId", product.ProductSubtypeRelation.AddProductSubtypeRelation)
+		productRouterPrivate.DELETE("/:productId/subtype/:subtypeId", product.ProductSubtypeRelation.RemoveProductSubtypeRelation)
+		productRouterPrivate.DELETE("/:productId/subtypes", product.ProductSubtypeRelation.RemoveAllProductSubtypeRelations)
 	}
-} 
+}

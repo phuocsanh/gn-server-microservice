@@ -12,38 +12,20 @@ import (
 
 const createMushroom = `-- name: CreateMushroom :one
 INSERT INTO mushrooms (
-    product_shop,
-    brand,
-    size,
-    material,
+    name,
     created_at,
     updated_at
 ) VALUES (
-    $1, $2, $3, $4, NOW(), NOW()
-) RETURNING id, product_shop, brand, size, material, created_at, updated_at
+    $1, NOW(), NOW()
+) RETURNING id, name, created_at, updated_at
 `
 
-type CreateMushroomParams struct {
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
-}
-
-func (q *Queries) CreateMushroom(ctx context.Context, arg CreateMushroomParams) (Mushroom, error) {
-	row := q.db.QueryRowContext(ctx, createMushroom,
-		arg.ProductShop,
-		arg.Brand,
-		arg.Size,
-		arg.Material,
-	)
+func (q *Queries) CreateMushroom(ctx context.Context, name sql.NullString) (Mushroom, error) {
+	row := q.db.QueryRowContext(ctx, createMushroom, name)
 	var i Mushroom
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -60,7 +42,7 @@ func (q *Queries) DeleteMushroom(ctx context.Context, id int32) error {
 }
 
 const getMushroom = `-- name: GetMushroom :one
-SELECT id, product_shop, brand, size, material, created_at, updated_at FROM mushrooms WHERE id = $1
+SELECT id, name, created_at, updated_at FROM mushrooms WHERE id = $1
 `
 
 func (q *Queries) GetMushroom(ctx context.Context, id int32) (Mushroom, error) {
@@ -68,10 +50,7 @@ func (q *Queries) GetMushroom(ctx context.Context, id int32) (Mushroom, error) {
 	var i Mushroom
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -80,39 +59,24 @@ func (q *Queries) GetMushroom(ctx context.Context, id int32) (Mushroom, error) {
 
 const updateMushroom = `-- name: UpdateMushroom :one
 UPDATE mushrooms
-SET 
-    product_shop = $2,
-    brand = $3,
-    size = $4,
-    material = $5,
+SET
+    name = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_shop, brand, size, material, created_at, updated_at
+RETURNING id, name, created_at, updated_at
 `
 
 type UpdateMushroomParams struct {
-	ID          int32
-	ProductShop int32
-	Brand       sql.NullString
-	Size        sql.NullString
-	Material    sql.NullString
+	ID   int32
+	Name sql.NullString
 }
 
 func (q *Queries) UpdateMushroom(ctx context.Context, arg UpdateMushroomParams) (Mushroom, error) {
-	row := q.db.QueryRowContext(ctx, updateMushroom,
-		arg.ID,
-		arg.ProductShop,
-		arg.Brand,
-		arg.Size,
-		arg.Material,
-	)
+	row := q.db.QueryRowContext(ctx, updateMushroom, arg.ID, arg.Name)
 	var i Mushroom
 	err := row.Scan(
 		&i.ID,
-		&i.ProductShop,
-		&i.Brand,
-		&i.Size,
-		&i.Material,
+		&i.Name,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

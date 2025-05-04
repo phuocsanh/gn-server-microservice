@@ -15,4 +15,9 @@ func InitProductService() {
 	service.Mushroom = wire.InitializeMushroomService(queries)
 	service.Vegetable = wire.InitializeVegetableService(queries)
 	service.Bonsai = wire.InitializeBonsaiService(queries)
-} 
+
+	// Initialize product type services
+	service.ProductType = wire.InitializeProductTypeService(queries)
+	service.ProductSubtype = wire.InitializeProductSubtypeService(queries)
+	service.ProductSubtypeRelation = wire.InitializeProductSubtypeRelationService(queries)
+}

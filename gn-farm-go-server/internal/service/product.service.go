@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
 	"gn-farm-go-server/internal/database"
 )
 
@@ -31,24 +34,76 @@ type ProductService interface {
 }
 
 type MushroomService interface {
-	CreateMushroom(ctx context.Context, params *database.CreateMushroomParams) (*database.Mushroom, error)
+	CreateMushroom(ctx context.Context, name sql.NullString) (*database.Mushroom, error)
 	GetMushroom(ctx context.Context, id int32) (*database.Mushroom, error)
 	UpdateMushroom(ctx context.Context, params *database.UpdateMushroomParams) (*database.Mushroom, error)
 	DeleteMushroom(ctx context.Context, id int32) error
 }
 
 type VegetableService interface {
-	CreateVegetable(ctx context.Context, params *database.CreateVegetableParams) (*database.Vegetable, error)
+	CreateVegetable(ctx context.Context, name sql.NullString) (*database.Vegetable, error)
 	GetVegetable(ctx context.Context, id int32) (*database.Vegetable, error)
 	UpdateVegetable(ctx context.Context, params *database.UpdateVegetableParams) (*database.Vegetable, error)
 	DeleteVegetable(ctx context.Context, id int32) error
 }
 
 type BonsaiService interface {
-	CreateBonsai(ctx context.Context, params *database.CreateBonsaiParams) (*database.Bonsai, error)
+	CreateBonsai(ctx context.Context, name sql.NullString) (*database.Bonsai, error)
 	GetBonsai(ctx context.Context, id int32) (*database.Bonsai, error)
 	UpdateBonsai(ctx context.Context, params *database.UpdateBonsaiParams) (*database.Bonsai, error)
 	DeleteBonsai(ctx context.Context, id int32) error
+}
+
+// Product type constants
+const (
+	ProductTypeMushroom  int32 = 1
+	ProductTypeVegetable int32 = 2
+	ProductTypeBonsai    int32 = 3
+)
+
+// Error variables
+var (
+	ErrInvalidProductType = fmt.Errorf("invalid product type")
+)
+
+// Product attributes
+type ProductRequest struct {
+	ProductName            string          `json:"productName"`
+	ProductPrice           string          `json:"productPrice"`
+	ProductStatus          int32           `json:"productStatus"`
+	ProductThumb           string          `json:"productThumb"`
+	ProductPictures        []string        `json:"productPictures"`
+	ProductVideos          []string        `json:"productVideos"`
+	ProductDescription     string          `json:"productDescription"`
+	ProductQuantity        int32           `json:"productQuantity"`
+	ProductType            int32           `json:"productType"`
+	SubProductType         []int32         `json:"subProductType"`
+	Discount               string          `json:"discount"`
+	ProductDiscountedPrice string          `json:"productDiscountedPrice"`
+	ProductAttributes      json.RawMessage `json:"productAttributes"`
+	IsDraft                bool            `json:"isDraft"`
+	IsPublished            bool            `json:"isPublished"`
+}
+
+// Mushroom attributes
+type MushroomAttributes struct {
+	Brand    string `json:"brand"`
+	Size     string `json:"size"`
+	Material string `json:"material"`
+}
+
+// Vegetable attributes
+type VegetableAttributes struct {
+	Manufacturer string `json:"manufacturer"`
+	Model        string `json:"model"`
+	Color        string `json:"color"`
+}
+
+// Bonsai attributes
+type BonsaiAttributes struct {
+	Brand    string `json:"brand"`
+	Size     string `json:"size"`
+	Material string `json:"material"`
 }
 
 var (

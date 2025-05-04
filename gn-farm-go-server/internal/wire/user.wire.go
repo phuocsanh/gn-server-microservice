@@ -3,29 +3,29 @@
 package wire
 
 import (
-	"database/sql" // Assuming DB provider returns *sql.DB
+        "database/sql" // Assuming DB provider returns *sql.DB
 
-	"gn-farm-go-server/global"
-	"gn-farm-go-server/internal/database"
-	"gn-farm-go-server/internal/service"
-	"gn-farm-go-server/internal/service/impl"
-	"github.com/google/wire"
+        "gn-farm-go-server/global"
+        "gn-farm-go-server/internal/database"
+        "gn-farm-go-server/internal/service"
+        "gn-farm-go-server/internal/service/impl/user"
+        "github.com/google/wire"
 )
 
 // Database provider set (Example - replace with your actual DB provider)
 var dbProviderSet = wire.NewSet(
-	NewPostgresDB, // Assumes NewPostgresDB() *sql.DB exists
-	database.New, // Use the exported New function from sqlc
-	// Bind *sql.DB to the DBTX interface that database.New expects
-	wire.Bind(new(database.DBTX), new(*sql.DB)),
+        NewPostgresDB, // Assumes NewPostgresDB() *sql.DB exists
+        database.New, // Use the exported New function from sqlc
+        // Bind *sql.DB to the DBTX interface that database.New expects
+        wire.Bind(new(database.DBTX), new(*sql.DB)),
 )
 
 // Service provider set for User Login
 var userLoginServiceSet = wire.NewSet(
-	impl.NewUserLoginImpl,
-	// Bind the implementation to the interface
-	// Ensure sUserLogin is exported (SUserLogin) in impl package
-	wire.Bind(new(service.IUserLogin), new(*impl.SUserLogin)), // Use exported SUserLogin
+        user.NewUserLoginImpl,
+        // Bind the implementation to the interface
+        // Ensure sUserLogin is exported (SUserLogin) in impl package
+        wire.Bind(new(service.IUserLogin), new(*user.SUserLogin)), // Use exported SUserLogin
 )
 
 // Initialize only the necessary dependencies for UserLogin service registration
@@ -33,44 +33,43 @@ var userLoginServiceSet = wire.NewSet(
 // as controllers access the service via global functions (service.UserLogin()).
 // Returning an error ensures dependencies were built correctly.
 func InitUserLoginService() (service.IUserLogin, error) {
-	wire.Build(
-		dbProviderSet,
-		userLoginServiceSet,
-		// We don't explicitly call service.InitUserLogin here.
-		// Wire handles injecting the created IUserLogin implementation where needed,
-		// or we can call InitUserLogin manually after this function returns.
-		// Let's assume manual initialization for now or reliance on wire injection if IUserLogin is requested elsewhere.
-	)
-	// The return value isn't strictly necessary if InitUserLogin is called manually later,
-	// but Wire requires a return value matching one of the providers.
-	return nil, nil // Return nil for now, actual instance is created by Wire
+        wire.Build(
+                dbProviderSet,
+                userLoginServiceSet,
+                // We don't explicitly call service.InitUserLogin here.
+                // Wire handles injecting the created IUserLogin implementation where needed,
+                // or we can call InitUserLogin manually after this function returns.
+                // Let's assume manual initialization for now or reliance on wire injection if IUserLogin is requested elsewhere.
+        )
+        // The return value isn't strictly necessary if InitUserLogin is called manually later,
+        // but Wire requires a return value matching one of the providers.
+        return nil, nil // Return nil for now, actual instance is created by Wire
 }
 
 // --- Helper function for DB (Example) ---
 // You should have a proper way to provide your DB connection.
 func NewPostgresDB() *sql.DB {
-	// This should return your actual initialized *sql.DB connection
-	// return global.Pgdbc // Assuming global.Pgdbc is *sql.DB
-	// Need to ensure global.Pgdbc is initialized before wire runs, or provide it differently.
-	// Returning nil will cause wire to fail if DB is needed.
-	// Let's assume global.Pgdbc is initialized elsewhere for now.
-	if global.Pgdbc == nil {
+        // This should return your actual initialized *sql.DB connection
+        // return global.Pgdbc // Assuming global.Pgdbc is *sql.DB
+        // Need to ensure global.Pgdbc is initialized before wire runs, or provide it differently.
+        // Returning nil will cause wire to fail if DB is needed.
+        // Let's assume global.Pgdbc is initialized elsewhere for now.
+        if global.Pgdbc == nil {
         // If using sqlc with *sql.DB, global.Pgdbc needs to be initialized.
         // If using sqlc with *gorm.DB (global.Pgdb), you might need a different NewQueries.
         // Assuming sqlc uses *sql.DB and global.Pgdbc exists from postgresc.go init.
-		panic("global.Pgdbc is nil, ensure postgresc is initialized before wire")
-	}
-	return global.Pgdbc
+                panic("global.Pgdbc is nil, ensure postgresc is initialized before wire")
+        }
+        return global.Pgdbc
 }
 // --- Deprecated User Router Handler ---
 // Keep the old function signature but build the new dependencies.
 // It doesn't return UserController anymore, but the signature might be expected elsewhere.
 // Returning nil, nil signals successful dependency build without the old controller.
 // func InitUserRouterHanlder() (*controller.UserController, error) {
-// 	wire.Build(
-// 		dbProviderSet,
-// 		userLoginServiceSet,
-// 	)
-// 	return nil, nil
+//      wire.Build(
+//              dbProviderSet,
+//              userLoginServiceSet,
+//      )
+//      return nil, nil
 // }
-
