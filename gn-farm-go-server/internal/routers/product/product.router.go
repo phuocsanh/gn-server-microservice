@@ -26,14 +26,14 @@ func (pr *ProductRouter) InitProductRouter(Router *gin.RouterGroup) {
 		// Product Type routes
 		productRouterPublic.GET("/type", product.ProductType.ListProductTypes)
 		productRouterPublic.GET("/type/:id", product.ProductType.GetProductType)
-		productRouterPublic.GET("/type/:typeId/subtypes", product.ProductSubtype.ListProductSubtypesByType)
+		productRouterPublic.GET("/type/:id/subtypes", product.ProductSubtype.ListProductSubtypesByType)
 
 		// Product Subtype routes
 		productRouterPublic.GET("/subtype", product.ProductSubtype.ListProductSubtypes)
 		productRouterPublic.GET("/subtype/:id", product.ProductSubtype.GetProductSubtype)
 
 		// Product Subtype Relations routes
-		productRouterPublic.GET("/:productId/subtypes", product.ProductSubtypeRelation.GetProductSubtypeRelations)
+		productRouterPublic.GET("/:id/subtypes", product.ProductSubtypeRelation.GetProductSubtypeRelations)
 	}
 
 	// Private routes (requires authentication)
@@ -62,8 +62,8 @@ func (pr *ProductRouter) InitProductRouter(Router *gin.RouterGroup) {
 		productRouterPrivate.DELETE("/subtype/mapping", product.ProductSubtype.RemoveProductSubtypeMapping)
 
 		// Product Subtype Relations routes
-		productRouterPrivate.POST("/:productId/subtype/:subtypeId", product.ProductSubtypeRelation.AddProductSubtypeRelation)
-		productRouterPrivate.DELETE("/:productId/subtype/:subtypeId", product.ProductSubtypeRelation.RemoveProductSubtypeRelation)
-		productRouterPrivate.DELETE("/:productId/subtypes", product.ProductSubtypeRelation.RemoveAllProductSubtypeRelations)
+		productRouterPrivate.POST("/:id/subtype/:subtypeId", product.ProductSubtypeRelation.AddProductSubtypeRelation)
+		productRouterPrivate.DELETE("/:id/subtype/:subtypeId", product.ProductSubtypeRelation.RemoveProductSubtypeRelation)
+		productRouterPrivate.DELETE("/:id/subtypes", product.ProductSubtypeRelation.RemoveAllProductSubtypeRelations)
 	}
 }

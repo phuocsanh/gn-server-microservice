@@ -6,23 +6,12 @@ import (
 
 	"gn-farm-go-server/internal/model"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/vo/user"
 	"gn-farm-go-server/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// SetupTwoFactorAuthRequest represents a request to setup 2FA
-// @Description Setup 2FA request
-type SetupTwoFactorAuthRequest struct {
-	TwoFactorAuthType string `json:"two_factor_auth_type" example:"EMAIL"`
-	TwoFactorEmail    string `json:"two_factor_email" example:"user@example.com"`
-}
-
-// TwoFactorVerificationRequest represents a request to verify 2FA
-// @Description Verify 2FA request
-type TwoFactorVerificationRequest struct {
-	TwoFactorCode string `json:"two_factor_code" example:"123456"`
-}
 
 var TwoFA = new(sUser2FA)
 
@@ -35,7 +24,7 @@ type sUser2FA struct{}
 // @Accept       json
 // @Produce      json
 // @param Authorization header string true "Authorization token" example:"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-// @Param        payload body SetupTwoFactorAuthRequest true "payload"
+// @Param        payload body user.SetupTwoFactorAuthRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/two-factor/setup [post]
@@ -48,10 +37,16 @@ func (c *sUser2FA) SetupTwoFactorAuth(ctx *gin.Context) {
 	}
 
 	// Parse request body
-	var params model.SetupTwoFactorAuthInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	var req user.SetupTwoFactorAuthRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
+	}
+	
+	// Convert to model input
+	params := model.SetupTwoFactorAuthInput{
+		TwoFactorAuthType: req.TwoFactorAuthType,
+		TwoFactorEmail:    req.TwoFactorEmail,
 	}
 
 	// Extract user_id from subjectUUID (format: "1clitoken...")
@@ -87,7 +82,7 @@ func (c *sUser2FA) SetupTwoFactorAuth(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @param Authorization header string true "Authorization token" example:"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-// @Param        payload body TwoFactorVerificationRequest true "payload"
+// @Param        payload body user.TwoFactorVerificationRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/two-factor/verify [post]
@@ -100,10 +95,15 @@ func (c *sUser2FA) VerifyTwoFactorAuth(ctx *gin.Context) {
 	}
 
 	// Parse request body
-	var params model.TwoFactorVerificationInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	var req user.TwoFactorVerificationRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
+	}
+	
+	// Convert to model input
+	params := model.TwoFactorVerificationInput{
+		TwoFactorCode: req.VerifyCode,
 	}
 
 	// Extract user_id from subjectUUID (format: "1clitoken...")

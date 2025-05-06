@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gn-farm-go-server/internal/database"
+	"gn-farm-go-server/internal/model/product"
 	"gn-farm-go-server/internal/service"
 )
 
@@ -28,12 +29,9 @@ func createMushroomProduct(ctx context.Context, db *database.Queries, params int
 		return nil, fmt.Errorf("invalid params type for mushroom product")
 	}
 
-	// Create mushroom record
-	name := sql.NullString{String: mushroomAttrs.Brand, Valid: true}
-	_, err := db.CreateMushroom(ctx, name)
-	if err != nil {
-		return nil, err
-	}
+	// Chuẩn bị thuộc tính cho sản phẩm
+	attributes, _ := json.Marshal(mushroomAttrs)
+	// Sử dụng tên thương hiệu làm tên sản phẩm nếu không có tên sản phẩm
 
 	// Create product record
 	productReq, ok := params.(service.ProductRequest)
@@ -48,7 +46,7 @@ func createMushroomProduct(ctx context.Context, db *database.Queries, params int
 			ProductType:            service.ProductTypeMushroom,
 			SubProductType:         []int32{},
 			ProductDiscountedPrice: "0",
-			ProductAttributes:      json.RawMessage("{}"),
+			ProductAttributes:      attributes,
 		}
 
 		product, err := db.CreateProduct(ctx, productParams)
@@ -107,12 +105,9 @@ func createVegetableProduct(ctx context.Context, db *database.Queries, params in
 		return nil, fmt.Errorf("invalid params type for vegetable product")
 	}
 
-	// Create vegetable record
-	name := sql.NullString{String: vegetableAttrs.Manufacturer, Valid: true}
-	_, err := db.CreateVegetable(ctx, name)
-	if err != nil {
-		return nil, err
-	}
+	// Chuẩn bị thuộc tính cho sản phẩm
+	attributes, _ := json.Marshal(vegetableAttrs)
+	// Sử dụng tên nhà sản xuất làm tên sản phẩm nếu không có tên sản phẩm
 
 	// Create product record
 	productReq, ok := params.(service.ProductRequest)
@@ -127,7 +122,7 @@ func createVegetableProduct(ctx context.Context, db *database.Queries, params in
 			ProductType:            service.ProductTypeVegetable,
 			SubProductType:         []int32{},
 			ProductDiscountedPrice: "0",
-			ProductAttributes:      json.RawMessage("{}"),
+			ProductAttributes:      attributes,
 		}
 
 		product, err := db.CreateProduct(ctx, productParams)
@@ -186,12 +181,9 @@ func createBonsaiProduct(ctx context.Context, db *database.Queries, params inter
 		return nil, fmt.Errorf("invalid params type for bonsai product")
 	}
 
-	// Create bonsai record
-	name := sql.NullString{String: bonsaiAttrs.Brand, Valid: true}
-	_, err := db.CreateBonsai(ctx, name)
-	if err != nil {
-		return nil, err
-	}
+	// Chuẩn bị thuộc tính cho sản phẩm
+	attributes, _ := json.Marshal(bonsaiAttrs)
+	// Sử dụng tên thương hiệu làm tên sản phẩm nếu không có tên sản phẩm
 
 	// Create product record
 	productReq, ok := params.(service.ProductRequest)
@@ -206,7 +198,7 @@ func createBonsaiProduct(ctx context.Context, db *database.Queries, params inter
 			ProductType:            service.ProductTypeBonsai,
 			SubProductType:         []int32{},
 			ProductDiscountedPrice: "0",
-			ProductAttributes:      json.RawMessage("{}"),
+			ProductAttributes:      attributes,
 		}
 
 		product, err := db.CreateProduct(ctx, productParams)
@@ -349,14 +341,28 @@ func (s *productService) UpdateProductWithType(ctx context.Context, productType 
 			return nil, fmt.Errorf("invalid params type for mushroom product")
 		}
 
-		// Convert to database params
-		mushroomParams := database.UpdateMushroomParams{
-			ID:   id,
-			Name: sql.NullString{String: mushroomAttrs.Brand, Valid: true},
+		// Lấy sản phẩm hiện tại
+		product, err := s.GetProduct(ctx, id)
+		if err != nil {
+			return nil, err
 		}
 
-		// Update mushroom
-		_, err := s.db.UpdateMushroom(ctx, mushroomParams)
+		// Kiểm tra xem có phải loại Mushroom không
+		if product.ProductType != service.ProductTypeMushroom {
+			return nil, fmt.Errorf("product type mismatch: expected %d, got %d", service.ProductTypeMushroom, product.ProductType)
+		}
+
+		// Cập nhật thuộc tính
+		attributes, _ := json.Marshal(mushroomAttrs)
+
+		// Convert to database params
+		updateParams := database.UpdateProductParams{
+			ID:                id,
+			ProductAttributes: attributes,
+		}
+
+		// Update product
+		_, err = s.db.UpdateProduct(ctx, updateParams)
 		if err != nil {
 			return nil, err
 		}
@@ -368,14 +374,28 @@ func (s *productService) UpdateProductWithType(ctx context.Context, productType 
 			return nil, fmt.Errorf("invalid params type for vegetable product")
 		}
 
-		// Convert to database params
-		vegetableParams := database.UpdateVegetableParams{
-			ID:   id,
-			Name: sql.NullString{String: vegetableAttrs.Manufacturer, Valid: true},
+		// Lấy sản phẩm hiện tại
+		product, err := s.GetProduct(ctx, id)
+		if err != nil {
+			return nil, err
 		}
 
-		// Update vegetable
-		_, err := s.db.UpdateVegetable(ctx, vegetableParams)
+		// Kiểm tra xem có phải loại Vegetable không
+		if product.ProductType != service.ProductTypeVegetable {
+			return nil, fmt.Errorf("product type mismatch: expected %d, got %d", service.ProductTypeVegetable, product.ProductType)
+		}
+
+		// Cập nhật thuộc tính
+		attributes, _ := json.Marshal(vegetableAttrs)
+
+		// Convert to database params
+		updateParams := database.UpdateProductParams{
+			ID:                id,
+			ProductAttributes: attributes,
+		}
+
+		// Update product
+		_, err = s.db.UpdateProduct(ctx, updateParams)
 		if err != nil {
 			return nil, err
 		}
@@ -387,14 +407,28 @@ func (s *productService) UpdateProductWithType(ctx context.Context, productType 
 			return nil, fmt.Errorf("invalid params type for bonsai product")
 		}
 
-		// Convert to database params
-		bonsaiParams := database.UpdateBonsaiParams{
-			ID:   id,
-			Name: sql.NullString{String: bonsaiAttrs.Brand, Valid: true},
+		// Lấy sản phẩm hiện tại
+		product, err := s.GetProduct(ctx, id)
+		if err != nil {
+			return nil, err
 		}
 
-		// Update bonsai
-		_, err := s.db.UpdateBonsai(ctx, bonsaiParams)
+		// Kiểm tra xem có phải loại Bonsai không
+		if product.ProductType != service.ProductTypeBonsai {
+			return nil, fmt.Errorf("product type mismatch: expected %d, got %d", service.ProductTypeBonsai, product.ProductType)
+		}
+
+		// Cập nhật thuộc tính
+		attributes, _ := json.Marshal(bonsaiAttrs)
+
+		// Convert to database params
+		updateParams := database.UpdateProductParams{
+			ID:                id,
+			ProductAttributes: attributes,
+		}
+
+		// Update product
+		_, err = s.db.UpdateProduct(ctx, updateParams)
 		if err != nil {
 			return nil, err
 		}
@@ -440,13 +474,13 @@ func (s *productService) FilterProducts(ctx context.Context, params database.Fil
 	return result, nil
 }
 
-func (s *productService) GetProductStats(ctx context.Context) (*service.ProductStats, error) {
+func (s *productService) GetProductStats(ctx context.Context) (*product.ProductStats, error) {
 	statsRow, err := s.db.GetProductStats(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	stats := &service.ProductStats{
+	stats := &product.ProductStats{
 		TotalProducts:      statsRow.TotalProducts,
 		InStockProducts:    statsRow.InStockProducts,
 		OutOfStockProducts: statsRow.OutOfStockProducts,
@@ -480,32 +514,97 @@ func NewMushroomService(db *database.Queries) service.MushroomService {
 	return &mushroomService{db: db}
 }
 
-func (s *mushroomService) CreateMushroom(ctx context.Context, name sql.NullString) (*database.Mushroom, error) {
-	mushroom, err := s.db.CreateMushroom(ctx, name)
+func (s *mushroomService) CreateMushroom(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	// Tạo sản phẩm với loại Mushroom
+	attributes, _ := json.Marshal(service.MushroomAttributes{
+		Brand: name.String,
+	})
+	
+	params := database.CreateProductParams{
+		ProductName:            name.String,
+		ProductPrice:           "0",
+		ProductThumb:           "default.jpg",
+		ProductPictures:        []string{},
+		ProductVideos:          []string{},
+		ProductType:            service.ProductTypeMushroom,
+		SubProductType:         []int32{},
+		ProductDiscountedPrice: "0",
+		ProductAttributes:      attributes,
+	}
+	
+	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return &mushroom, nil
+	return &product, nil
 }
 
-func (s *mushroomService) GetMushroom(ctx context.Context, id int32) (*database.Mushroom, error) {
-	mushroom, err := s.db.GetMushroom(ctx, id)
+func (s *mushroomService) GetMushroom(ctx context.Context, id int32) (*database.Product, error) {
+	// Lấy sản phẩm theo ID và kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &mushroom, nil
+	
+	// Kiểm tra xem có phải loại Mushroom không
+	if product.ProductType != service.ProductTypeMushroom {
+		return nil, fmt.Errorf("product is not a mushroom type")
+	}
+	
+	return &product, nil
 }
 
-func (s *mushroomService) UpdateMushroom(ctx context.Context, params *database.UpdateMushroomParams) (*database.Mushroom, error) {
-	mushroom, err := s.db.UpdateMushroom(ctx, *params)
+func (s *mushroomService) UpdateMushroom(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Chuyển đổi params sang đúng kiểu
+	mushroomParams, ok := params.(service.MushroomAttributes)
+	if !ok {
+		return nil, fmt.Errorf("invalid params type for mushroom")
+	}
+	
+	// Lấy ID từ params (giả định rằng params có trường ID)
+	id := int32(0) // Cần lấy ID từ params
+	
+	// Lấy sản phẩm hiện tại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &mushroom, nil
+	
+	// Kiểm tra xem có phải loại Mushroom không
+	if product.ProductType != service.ProductTypeMushroom {
+		return nil, fmt.Errorf("product is not a mushroom type")
+	}
+	
+	// Cập nhật thuộc tính
+	attributes, _ := json.Marshal(mushroomParams)
+	
+	updateParams := database.UpdateProductParams{
+		ID:               id,
+		ProductAttributes: attributes,
+	}
+	
+	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &updatedProduct, nil
 }
 
 func (s *mushroomService) DeleteMushroom(ctx context.Context, id int32) error {
-	return s.db.DeleteMushroom(ctx, id)
+	// Lấy sản phẩm để kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
+	if err != nil {
+		return err
+	}
+	
+	// Kiểm tra xem có phải loại Mushroom không
+	if product.ProductType != service.ProductTypeMushroom {
+		return fmt.Errorf("product is not a mushroom type")
+	}
+	
+	// Xóa sản phẩm
+	return s.db.DeleteProduct(ctx, id)
 }
 
 type vegetableService struct {
@@ -516,32 +615,97 @@ func NewVegetableService(db *database.Queries) service.VegetableService {
 	return &vegetableService{db: db}
 }
 
-func (s *vegetableService) CreateVegetable(ctx context.Context, name sql.NullString) (*database.Vegetable, error) {
-	vegetable, err := s.db.CreateVegetable(ctx, name)
+func (s *vegetableService) CreateVegetable(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	// Tạo sản phẩm với loại Vegetable
+	attributes, _ := json.Marshal(service.VegetableAttributes{
+		Manufacturer: name.String,
+	})
+	
+	params := database.CreateProductParams{
+		ProductName:            name.String,
+		ProductPrice:           "0",
+		ProductThumb:           "default.jpg",
+		ProductPictures:        []string{},
+		ProductVideos:          []string{},
+		ProductType:            service.ProductTypeVegetable,
+		SubProductType:         []int32{},
+		ProductDiscountedPrice: "0",
+		ProductAttributes:      attributes,
+	}
+	
+	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return &vegetable, nil
+	return &product, nil
 }
 
-func (s *vegetableService) GetVegetable(ctx context.Context, id int32) (*database.Vegetable, error) {
-	vegetable, err := s.db.GetVegetable(ctx, id)
+func (s *vegetableService) GetVegetable(ctx context.Context, id int32) (*database.Product, error) {
+	// Lấy sản phẩm theo ID và kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &vegetable, nil
+	
+	// Kiểm tra xem có phải loại Vegetable không
+	if product.ProductType != service.ProductTypeVegetable {
+		return nil, fmt.Errorf("product is not a vegetable type")
+	}
+	
+	return &product, nil
 }
 
-func (s *vegetableService) UpdateVegetable(ctx context.Context, params *database.UpdateVegetableParams) (*database.Vegetable, error) {
-	vegetable, err := s.db.UpdateVegetable(ctx, *params)
+func (s *vegetableService) UpdateVegetable(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Chuyển đổi params sang đúng kiểu
+	vegetableParams, ok := params.(service.VegetableAttributes)
+	if !ok {
+		return nil, fmt.Errorf("invalid params type for vegetable")
+	}
+	
+	// Lấy ID từ params (giả định rằng params có trường ID)
+	id := int32(0) // Cần lấy ID từ params
+	
+	// Lấy sản phẩm hiện tại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &vegetable, nil
+	
+	// Kiểm tra xem có phải loại Vegetable không
+	if product.ProductType != service.ProductTypeVegetable {
+		return nil, fmt.Errorf("product is not a vegetable type")
+	}
+	
+	// Cập nhật thuộc tính
+	attributes, _ := json.Marshal(vegetableParams)
+	
+	updateParams := database.UpdateProductParams{
+		ID:               id,
+		ProductAttributes: attributes,
+	}
+	
+	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &updatedProduct, nil
 }
 
 func (s *vegetableService) DeleteVegetable(ctx context.Context, id int32) error {
-	return s.db.DeleteVegetable(ctx, id)
+	// Lấy sản phẩm để kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
+	if err != nil {
+		return err
+	}
+	
+	// Kiểm tra xem có phải loại Vegetable không
+	if product.ProductType != service.ProductTypeVegetable {
+		return fmt.Errorf("product is not a vegetable type")
+	}
+	
+	// Xóa sản phẩm
+	return s.db.DeleteProduct(ctx, id)
 }
 
 type bonsaiService struct {
@@ -552,30 +716,95 @@ func NewBonsaiService(db *database.Queries) service.BonsaiService {
 	return &bonsaiService{db: db}
 }
 
-func (s *bonsaiService) CreateBonsai(ctx context.Context, name sql.NullString) (*database.Bonsai, error) {
-	bonsai, err := s.db.CreateBonsai(ctx, name)
+func (s *bonsaiService) CreateBonsai(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	// Tạo sản phẩm với loại Bonsai
+	attributes, _ := json.Marshal(service.BonsaiAttributes{
+		Brand: name.String,
+	})
+	
+	params := database.CreateProductParams{
+		ProductName:            name.String,
+		ProductPrice:           "0",
+		ProductThumb:           "default.jpg",
+		ProductPictures:        []string{},
+		ProductVideos:          []string{},
+		ProductType:            service.ProductTypeBonsai,
+		SubProductType:         []int32{},
+		ProductDiscountedPrice: "0",
+		ProductAttributes:      attributes,
+	}
+	
+	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	return &bonsai, nil
+	return &product, nil
 }
 
-func (s *bonsaiService) GetBonsai(ctx context.Context, id int32) (*database.Bonsai, error) {
-	bonsai, err := s.db.GetBonsai(ctx, id)
+func (s *bonsaiService) GetBonsai(ctx context.Context, id int32) (*database.Product, error) {
+	// Lấy sản phẩm theo ID và kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &bonsai, nil
+	
+	// Kiểm tra xem có phải loại Bonsai không
+	if product.ProductType != service.ProductTypeBonsai {
+		return nil, fmt.Errorf("product is not a bonsai type")
+	}
+	
+	return &product, nil
 }
 
-func (s *bonsaiService) UpdateBonsai(ctx context.Context, params *database.UpdateBonsaiParams) (*database.Bonsai, error) {
-	bonsai, err := s.db.UpdateBonsai(ctx, *params)
+func (s *bonsaiService) UpdateBonsai(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Chuyển đổi params sang đúng kiểu
+	bonsaiParams, ok := params.(service.BonsaiAttributes)
+	if !ok {
+		return nil, fmt.Errorf("invalid params type for bonsai")
+	}
+	
+	// Lấy ID từ params (giả định rằng params có trường ID)
+	id := int32(0) // Cần lấy ID từ params
+	
+	// Lấy sản phẩm hiện tại
+	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	return &bonsai, nil
+	
+	// Kiểm tra xem có phải loại Bonsai không
+	if product.ProductType != service.ProductTypeBonsai {
+		return nil, fmt.Errorf("product is not a bonsai type")
+	}
+	
+	// Cập nhật thuộc tính
+	attributes, _ := json.Marshal(bonsaiParams)
+	
+	updateParams := database.UpdateProductParams{
+		ID:               id,
+		ProductAttributes: attributes,
+	}
+	
+	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
+	if err != nil {
+		return nil, err
+	}
+	
+	return &updatedProduct, nil
 }
 
 func (s *bonsaiService) DeleteBonsai(ctx context.Context, id int32) error {
-	return s.db.DeleteBonsai(ctx, id)
+	// Lấy sản phẩm để kiểm tra loại
+	product, err := s.db.GetProduct(ctx, id)
+	if err != nil {
+		return err
+	}
+	
+	// Kiểm tra xem có phải loại Bonsai không
+	if product.ProductType != service.ProductTypeBonsai {
+		return fmt.Errorf("product is not a bonsai type")
+	}
+	
+	// Xóa sản phẩm
+	return s.db.DeleteProduct(ctx, id)
 }

@@ -12,13 +12,6 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
-type Bonsai struct {
-	ID        int32
-	Name      sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
 // Stores metadata for chat conversations
 type ChatConversation struct {
 	ConversationID   string
@@ -38,91 +31,6 @@ type ChatParticipant struct {
 	Role           sql.NullString
 	JoinedAt       sql.NullTime
 	LeftAt         sql.NullTime
-}
-
-type Mushroom struct {
-	ID        int32
-	Name      sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-// pre_go_acc_user_base_9999
-type PreGoAccUserBase9999 struct {
-	UserID         int32
-	UserAccount    string
-	UserPassword   string
-	UserSalt       string
-	UserLoginTime  sql.NullTime
-	UserLogoutTime sql.NullTime
-	UserLoginIp    sql.NullString
-	UserCreatedAt  sql.NullTime
-	UserUpdatedAt  sql.NullTime
-	// authentication is enabled for the user
-	IsTwoFactorEnabled sql.NullBool
-}
-
-// pre_go_acc_user_info_9999
-type PreGoAccUserInfo9999 struct {
-	// User ID
-	UserID int64
-	// User account
-	UserAccount string
-	// User nickname
-	UserNickname sql.NullString
-	// User avatar
-	UserAvatar sql.NullString
-	// User state: 0-Locked, 1-Activated, 2-Not Activated
-	UserState int16
-	// Mobile phone number
-	UserMobile sql.NullString
-	// User gender: 0-Secret, 1-Male, 2-Female
-	UserGender sql.NullInt16
-	// User birthday
-	UserBirthday sql.NullTime
-	// User email address
-	UserEmail sql.NullString
-	// Authentication status: 0-Not Authenticated, 1-Pending, 2-Authenticated, 3-Failed
-	UserIsAuthentication int16
-	// Record creation time
-	CreatedAt sql.NullTime
-	// Record update time
-	UpdatedAt sql.NullTime
-}
-
-// pre_go_acc_user_two_factor_9999
-type PreGoAccUserTwoFactor9999 struct {
-	// Primary key auto-increment
-	TwoFactorID int32
-	// Foreign key linking to the user table
-	UserID int32
-	// Type of 2FA method (SMS, Email, App)
-	TwoFactorAuthType string
-	// Secret information for 2FA (e.g., TOTP secret key for app 2FA)
-	TwoFactorAuthSecret string
-	// Phone number for SMS 2FA (if applicable)
-	TwoFactorPhone sql.NullString
-	// Email address for Email 2FA (if applicable)
-	TwoFactorEmail sql.NullString
-	// Activation status of the 2FA method
-	TwoFactorIsActive bool
-	// Timestamp of 2FA method creation
-	TwoFactorCreatedAt sql.NullTime
-	// Timestamp of 2FA method update
-	TwoFactorUpdatedAt sql.NullTime
-}
-
-// account_user_verify
-type PreGoAccUserVerify9999 struct {
-	VerifyID        int32
-	VerifyOtp       string
-	VerifyKey       string
-	VerifyKeyHash   string
-	VerifyType      sql.NullInt32
-	IsVerified      sql.NullInt32
-	IsDeleted       sql.NullInt32
-	VerifyCreatedAt sql.NullTime
-	VerifyUpdatedAt sql.NullTime
 }
 
 type Product struct {
@@ -178,9 +86,80 @@ type ProductType struct {
 	UpdatedAt   time.Time
 }
 
-type Vegetable struct {
-	ID        int32
-	Name      sql.NullString
-	CreatedAt time.Time
-	UpdatedAt time.Time
+// users
+type User struct {
+	UserID         int32
+	UserAccount    string
+	UserPassword   string
+	UserSalt       string
+	UserLoginTime  sql.NullTime
+	UserLogoutTime sql.NullTime
+	UserLoginIp    sql.NullString
+	UserCreatedAt  sql.NullTime
+	UserUpdatedAt  sql.NullTime
+	// authentication is enabled for the user
+	IsTwoFactorEnabled sql.NullBool
+}
+
+// user_profiles
+type UserProfile struct {
+	// User ID
+	UserID int64
+	// User account
+	UserAccount string
+	// User nickname
+	UserNickname sql.NullString
+	// User avatar
+	UserAvatar sql.NullString
+	// User state: 0-Locked, 1-Activated, 2-Not Activated
+	UserState int16
+	// Mobile phone number
+	UserMobile sql.NullString
+	// User gender: 0-Secret, 1-Male, 2-Female
+	UserGender sql.NullInt16
+	// User birthday
+	UserBirthday sql.NullTime
+	// User email address
+	UserEmail sql.NullString
+	// Authentication status: 0-Not Authenticated, 1-Pending, 2-Authenticated, 3-Failed
+	UserIsAuthentication int16
+	// Record creation time
+	CreatedAt sql.NullTime
+	// Record update time
+	UpdatedAt sql.NullTime
+}
+
+// user_two_factors
+type UserTwoFactor struct {
+	// Primary key auto-increment
+	TwoFactorID int32
+	// Foreign key linking to the user table
+	UserID int32
+	// Type of 2FA method (SMS, Email, App)
+	TwoFactorAuthType string
+	// Secret information for 2FA (e.g., TOTP secret key for app 2FA)
+	TwoFactorAuthSecret string
+	// Phone number for SMS 2FA (if applicable)
+	TwoFactorPhone sql.NullString
+	// Email address for Email 2FA (if applicable)
+	TwoFactorEmail sql.NullString
+	// Activation status of the 2FA method
+	TwoFactorIsActive bool
+	// Timestamp of 2FA method creation
+	TwoFactorCreatedAt sql.NullTime
+	// Timestamp of 2FA method update
+	TwoFactorUpdatedAt sql.NullTime
+}
+
+// account_user_verify
+type UserVerification struct {
+	VerifyID        int32
+	VerifyOtp       string
+	VerifyKey       string
+	VerifyKeyHash   string
+	VerifyType      sql.NullInt32
+	IsVerified      sql.NullInt32
+	IsDeleted       sql.NullInt32
+	VerifyCreatedAt sql.NullTime
+	VerifyUpdatedAt sql.NullTime
 }

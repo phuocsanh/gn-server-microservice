@@ -2,77 +2,24 @@ package product
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/vo/product"
 	"gn-farm-go-server/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// CreateProductRequest represents a request to create a product with all fields
-// @Description Product creation request with all fields
-type CreateProductRequest struct {
-	ProductName            string          `json:"productName" example:"Organic Tomato"`
-	ProductPrice           string          `json:"productPrice" example:"15.99"`
-	ProductStatus          *int32          `json:"productStatus,omitempty" example:"1"`
-	ProductThumb           string          `json:"productThumb" example:"https://example.com/tomato.jpg"`
-	ProductPictures        []string        `json:"productPictures"`
-	ProductVideos          []string        `json:"productVideos"`
-	ProductDescription     *string         `json:"productDescription,omitempty" example:"Fresh organic tomatoes"`
-	ProductQuantity        *int32          `json:"productQuantity,omitempty" example:"100"`
-	ProductType            int32           `json:"productType" example:"1"`
-	SubProductType         []int32         `json:"subProductType" example:"[1,2]"`
-	Discount               *string         `json:"discount,omitempty" example:"10"`
-	ProductDiscountedPrice string          `json:"productDiscountedPrice" example:"14.39"`
-	ProductAttributes      json.RawMessage `json:"productAttributes"`
-	IsDraft                bool            `json:"isDraft" example:"false"`
-	IsPublished            bool            `json:"isPublished" example:"true"`
-}
-
-// UpdateProductRequest represents a request to update a product with all fields
-// @Description Product update request with all fields
-type UpdateProductRequest struct {
-	ProductName            string          `json:"productName" example:"Organic Tomato Premium"`
-	ProductPrice           string          `json:"productPrice" example:"19.99"`
-	ProductStatus          *int32          `json:"productStatus,omitempty" example:"1"`
-	ProductThumb           string          `json:"productThumb" example:"https://example.com/tomato-premium.jpg"`
-	ProductPictures        []string        `json:"productPictures"`
-	ProductVideos          []string        `json:"productVideos"`
-	ProductDescription     *string         `json:"productDescription,omitempty" example:"Premium organic tomatoes"`
-	ProductQuantity        *int32          `json:"productQuantity,omitempty" example:"50"`
-	ProductType            int32           `json:"productType" example:"1"`
-	SubProductType         []int32         `json:"subProductType" example:"[1,2]"`
-	Discount               *string         `json:"discount,omitempty" example:"15"`
-	ProductDiscountedPrice string          `json:"productDiscountedPrice" example:"16.99"`
-	ProductAttributes      json.RawMessage `json:"productAttributes"`
-	IsDraft                bool            `json:"isDraft" example:"false"`
-	IsPublished            bool            `json:"isPublished" example:"true"`
-}
-
-// BulkUpdateRequest represents a request to update multiple products
-// @Description Bulk product update request
-type BulkUpdateRequest struct {
-	Products []ProductUpdateItem `json:"products"`
-}
-
-// ProductUpdateItem represents a single product update in a bulk update
-// @Description Product update item
-type ProductUpdateItem struct {
-	ID          int    `json:"id" example:"1"`
-	ProductName string `json:"productName" example:"Updated Product 1"`
-	ProductPrice string `json:"productPrice" example:"29.99"`
-}
+var (
+	ErrProductNotFound = fmt.Errorf("product not found")
+	ErrInvalidProduct  = fmt.Errorf("invalid product data")
+)
 
 // Các struct request cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
 // vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 
-var (
-	Product = new(productController)
-	// Các controller cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
-	// vì chúng nên được xử lý như các product_type thông qua ProductTypeController
-)
+var Product = new(productController)
 
 type productController struct{}
 
@@ -88,7 +35,7 @@ type productController struct{}
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product [post]
 func (c *productController) CreateProduct(ctx *gin.Context) {
-	var req CreateProductRequest
+	var req product.CreateProductRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
@@ -177,15 +124,16 @@ func (c *productController) GetProduct(ctx *gin.Context) {
 // @Router       /product [get]
 func (c *productController) ListProducts(ctx *gin.Context) {
 	var params struct {
-		Limit  int32 `form:"limit" binding:"required,min=1,max=100"`
-		Offset int32 `form:"offset" binding:"min=0"`
+		Query  string `form:"query" binding:"required,min=1"`
+		Limit  int32  `form:"limit" binding:"required,min=1,max=100"`
+		Offset int32  `form:"offset" binding:"min=0"`
 	}
 	if err := ctx.ShouldBindQuery(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	products, err := service.Product.ListProducts(ctx, params.Limit, params.Offset)
+	products, err := service.Product.SearchProducts(ctx, params.Query, params.Limit, params.Offset)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
@@ -208,7 +156,7 @@ func (c *productController) ListProducts(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [put]
 func (c *productController) UpdateProduct(ctx *gin.Context) {
-	var req UpdateProductRequest
+	var req product.UpdateProductRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
@@ -275,18 +223,28 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [delete]
 func (c *productController) DeleteProduct(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var req product.BulkUpdateRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	if err := service.Product.DeleteProduct(ctx, id); err != nil {
+	var params []database.UpdateProductParams
+	for _, item := range req.Products {
+		params = append(params, database.UpdateProductParams{
+			ID:          int32(item.ID),
+			ProductName: item.ProductName,
+			ProductPrice: item.ProductPrice,
+		})
+	}
+
+	products, err := service.Product.BulkUpdateProducts(ctx, params)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	response.SuccessResponse(ctx, response.ErrCodeSuccess, products)
 }
 
 // SearchProducts searches for products by query
@@ -438,7 +396,7 @@ func (c *productController) GetProductStats(ctx *gin.Context) {
 // @Tags         product management
 // @Accept       json
 // @Produce      json
-// @Param        payload body BulkUpdateRequest true "Products to update"
+// @Param        payload body product.BulkUpdateRequest true "Products to update"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      500  {object}  response.ErrorResponseData

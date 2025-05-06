@@ -284,7 +284,7 @@ func (s *SUserLogin) Register(ctx context.Context, in *model.RegisterInput) (cod
 			return response.ErrInvalidOTP, fmt.Errorf("failed to save OTP to cache: %v", err)
 		}
 
-		// 6. Check if verify_key already exists in pre_go_acc_user_verify_9999 table
+		// 6. Check if verify_key already exists in user_verifications table
 		existingOTPCount, err := s.r.GetOTPByVerifyKey(ctx, in.VerifyKey)
 		if err != nil {
 			log.Printf("Error checking existing OTP record: %v", err)

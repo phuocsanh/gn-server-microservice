@@ -6,6 +6,7 @@ import (
 	"gn-farm-go-server/internal/model"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/utils/auth"
+	"gn-farm-go-server/internal/vo/user"
 	"gn-farm-go-server/pkg/response"
 	"log"
 	"strings"
@@ -13,35 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
-
-// LoginRequest represents a request to login
-// @Description Login request
-type LoginRequest struct {
-	UserAccount  string `json:"user_account" example:"user@example.com"`
-	UserPassword string `json:"user_password" example:"securePassword123"`
-}
-
-// RegisterRequest represents a request to register
-// @Description Register request
-type RegisterRequest struct {
-	VerifyKey     string `json:"verify_key" example:"user@example.com"`
-	VerifyType    int    `json:"verify_type" example:"1"`
-	VerifyPurpose string `json:"verify_purpose" example:"TEST_USER"`
-}
-
-// VerifyOTPRequest represents a request to verify OTP
-// @Description Verify OTP request
-type VerifyOTPRequest struct {
-	VerifyKey  string `json:"verify_key" example:"user@example.com"`
-	VerifyCode string `json:"verify_code" example:"123456"`
-}
-
-// UpdatePasswordRequest represents a request to update password after registration
-// @Description Update password request
-type UpdatePasswordRequest struct {
-	UserToken    string `json:"user_token" example:"abc123token"`
-	UserPassword string `json:"user_password" example:"newSecurePassword123"`
-}
 
 // management controller Login User
 var Login = new(cUserLogin)
@@ -54,17 +26,20 @@ type cUserLogin struct{}
 // @Tags         user management
 // @Accept       json
 // @Produce      json
-// @Param        payload body UpdatePasswordRequest true "payload"
+// @Param        payload body user.UpdatePasswordRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/update_pass_register [post]
 func (c *cUserLogin) UpdatePasswordRegister(ctx *gin.Context) {
-	var params model.UpdatePasswordRegisterInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	// Parse request body
+	var req user.UpdatePasswordRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
-	codeResult, result, err := service.UserLogin().UpdatePasswordRegister(ctx, params.UserToken, params.UserPassword)
+
+	// Call service
+	codeResult, result, err := service.UserLogin().UpdatePasswordRegister(ctx, req.UserToken, req.UserPassword)
 	if err != nil {
 		response.ErrorResponse(ctx, codeResult, err.Error())
 		return
@@ -78,17 +53,26 @@ func (c *cUserLogin) UpdatePasswordRegister(ctx *gin.Context) {
 // @Tags         user management
 // @Accept       json
 // @Produce      json
-// @Param        payload body VerifyOTPRequest true "payload"
+// @Param        payload body user.VerifyOTPRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/verify_account [post]
 func (c *cUserLogin) VerifyOTP(ctx *gin.Context) {
-	var params model.VerifyInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	// Parse request body
+	var req user.VerifyOTPRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
-	result, err := service.UserLogin().VerifyOTP(ctx, &params)
+
+	// Convert to model input
+	modelInput := &model.VerifyInput{
+		VerifyKey:  req.VerifyKey,
+		VerifyCode: req.VerifyCode,
+	}
+
+	// Call service
+	result, err := service.UserLogin().VerifyOTP(ctx, modelInput)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrInvalidOTP, err.Error())
 		return
@@ -102,20 +86,26 @@ func (c *cUserLogin) VerifyOTP(ctx *gin.Context) {
 // @Tags         user management
 // @Accept       json
 // @Produce      json
-// @Param        payload body LoginRequest true "payload"
+// @Param        payload body user.LoginRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/login [post]
 func (c *cUserLogin) Login(ctx *gin.Context) {
-	// Implement logic for login
-	var params model.LoginInput
-	fmt.Println("Login called with userAccount controller:", params.UserAccount, "and userPassword:", params.UserPassword)
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	// Parse request body
+	var req user.LoginRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	codeRs, dataRs, err := service.UserLogin().Login(ctx, &params)
+	// Convert to model input
+	modelInput := &model.LoginInput{
+		UserAccount:  req.UserAccount,
+		UserPassword: req.UserPassword,
+	}
+
+	// Call service
+	codeRs, dataRs, err := service.UserLogin().Login(ctx, modelInput)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
@@ -129,18 +119,27 @@ func (c *cUserLogin) Login(ctx *gin.Context) {
 // @Tags         user management
 // @Accept       json
 // @Produce      json
-// @Param        payload body RegisterRequest true "payload"
+// @Param        payload body user.RegisterRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/register [post]
 func (c *cUserLogin) Register(ctx *gin.Context) {
-	var params model.RegisterInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	// Parse request body
+	var req user.RegisterRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	codeStatus, err := service.UserLogin().Register(ctx, &params)
+	// Convert to model input
+	modelInput := &model.RegisterInput{
+		VerifyKey:     req.VerifyKey,
+		VerifyType:    req.VerifyType,
+		VerifyPurpose: req.VerifyPurpose,
+	}
+
+	// Call service
+	codeStatus, err := service.UserLogin().Register(ctx, modelInput)
 	if err != nil {
 		global.Logger.Error("Error registering user OTP", zap.Error(err))
 		response.ErrorResponse(ctx, codeStatus, err.Error())
@@ -153,24 +152,27 @@ func (c *cUserLogin) Register(ctx *gin.Context) {
 	}
 	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
 }
+
 // RefreshToken documentation
 // @Summary      Refresh Token
 // @Description  Refresh access token using refresh token
 // @Tags         user management
 // @Accept       json
 // @Produce      json
-// @Param        payload body model.RefreshTokenInput true "payload"
+// @Param        payload body user.RefreshTokenRequest true "payload"
 // @Success      200  {object}  response.ResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /user/refresh-token [post]
 func (c *cUserLogin) RefreshToken(ctx *gin.Context) {
-	var params model.RefreshTokenInput
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	// Parse request body
+	var req user.RefreshTokenRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	codeRs, dataRs, err := service.UserLogin().RefreshToken(ctx, params.RefreshToken)
+	// Call service
+	codeRs, dataRs, err := service.UserLogin().RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return

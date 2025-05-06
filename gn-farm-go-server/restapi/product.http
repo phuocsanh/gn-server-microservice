@@ -1,6 +1,6 @@
 ### ===== PRODUCT MANAGEMENT APIs =====
 
-### Login to get access token
+### Đăng nhập để lấy token
 # @name login
 POST http://localhost:8002/v1/user/login
 Content-Type: application/json
@@ -10,7 +10,7 @@ Content-Type: application/json
   "userPassword": "12345678"
 }
 
-### Store tokens from login response
+### Lưu token từ phản hồi đăng nhập
 @access_token = {{login.response.body.data.tokens.accessToken}}
 @refresh_token = {{login.response.body.data.tokens.refreshToken}}
 
