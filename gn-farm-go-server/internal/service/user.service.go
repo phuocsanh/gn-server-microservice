@@ -23,6 +23,9 @@ type (
 
 		// Verify Two Factor Authentication
 		VerifyTwoFactorAuth(ctx context.Context, in *model.TwoFactorVerificationInput) (codeResult int, err error)
+
+		// List users with pagination and search
+		ListUsers(ctx context.Context, in *model.ListUsersInput) (codeResult int, out model.ListUsersOutput, err error)
 	}
 
 	IUserInfo interface {

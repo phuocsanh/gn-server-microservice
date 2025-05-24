@@ -1,5 +1,7 @@
 package model
 
+import "gn-farm-go-server/internal/database"
+
 type RegisterInput struct {
 	VerifyKey     string `json:"verifyKey"`
 	VerifyType    int    `json:"verifyType"`
@@ -85,4 +87,29 @@ type LogoutInput struct {
 type LogoutOutput struct {
 	Success bool   `json:"success"`
 	Message string `json:"message,omitempty"`
+}
+
+// ListUsersInput định dạng dữ liệu đầu vào cho lấy danh sách user
+type ListUsersInput struct {
+	Page     int    `json:"page" form:"page"`         // Trang hiện tại (bắt đầu từ 1)
+	PageSize int    `json:"pageSize" form:"pageSize"` // Số lượng user trên mỗi trang
+	Search   string `json:"search" form:"search"`     // Từ khóa tìm kiếm theo tên/email
+}
+
+// UserListItem định dạng thông tin user trong danh sách
+// Bây giờ sử dụng trực tiếp database.UserProfile với JSON tags
+type UserListItem = database.UserProfile
+
+
+
+// ListUsersOutput định dạng dữ liệu trả về cho danh sách user
+type ListUsersOutput struct {
+	Users      []UserListItem `json:"users"`      // Danh sách user
+	Total      int64          `json:"total"`      // Tổng số user
+	Page       int            `json:"page"`       // Trang hiện tại
+	PageSize   int            `json:"pageSize"`   // Số lượng user trên mỗi trang
+	TotalPages int            `json:"totalPages"` // Tổng số trang
+	HasNext    bool           `json:"hasNext"`    // Có trang tiếp theo không
+	HasPrev    bool           `json:"hasPrev"`    // Có trang trước không
+	Message    string         `json:"message,omitempty"`
 }

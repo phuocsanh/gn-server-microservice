@@ -553,6 +553,86 @@ func (s *SUserLogin) Logout(ctx context.Context, token string) (codeResult int, 
 	return response.ErrCodeSuccess, out, nil
 }
 
+// ListUsers lấy danh sách user có phân trang và tìm kiếm theo tên
+func (s *SUserLogin) ListUsers(ctx context.Context, in *model.ListUsersInput) (codeResult int, out model.ListUsersOutput, err error) {
+	// 1. Validate input parameters
+	if in.Page <= 0 {
+		in.Page = 1
+	}
+	if in.PageSize <= 0 || in.PageSize > 100 {
+		in.PageSize = 10 // Default page size
+	}
+
+	// 2. Calculate offset
+	offset := (in.Page - 1) * in.PageSize
+
+	var users []database.UserProfile
+	var total int64
+
+	// 3. Check if search is provided
+	if in.Search != "" {
+		// Search users by account or nickname
+		searchPattern := "%" + in.Search + "%"
+
+		// Get total count with search
+		total, err = s.r.CountUsersWithSearch(ctx, database.CountUsersWithSearchParams{
+			UserAccount:  searchPattern,
+			UserNickname: sql.NullString{String: searchPattern, Valid: true},
+		})
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to count users with search: %v", err)
+		}
+
+		// Get users with search
+		users, err = s.r.ListUsersWithSearch(ctx, database.ListUsersWithSearchParams{
+			UserAccount:  searchPattern,
+			UserNickname: sql.NullString{String: searchPattern, Valid: true},
+			Limit:        int32(in.PageSize),
+			Offset:       int32(offset),
+		})
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to list users with search: %v", err)
+		}
+	} else {
+		// Get all users without search
+		total, err = s.r.CountUsers(ctx)
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to count users: %v", err)
+		}
+
+		// Get users without search
+		users, err = s.r.ListUsers(ctx, database.ListUsersParams{
+			Limit:  int32(in.PageSize),
+			Offset: int32(offset),
+		})
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to list users: %v", err)
+		}
+	}
+
+	// 4. No need to convert - use database models directly with JSON tags
+	userItems := users
+
+	// 5. Calculate pagination info
+	totalPages := int((total + int64(in.PageSize) - 1) / int64(in.PageSize))
+	hasNext := in.Page < totalPages
+	hasPrev := in.Page > 1
+
+	// 6. Build output
+	out = model.ListUsersOutput{
+		Users:      userItems,
+		Total:      total,
+		Page:       in.Page,
+		PageSize:   in.PageSize,
+		TotalPages: totalPages,
+		HasNext:    hasNext,
+		HasPrev:    hasPrev,
+		Message:    "Users retrieved successfully",
+	}
+
+	return response.ErrCodeSuccess, out, nil
+}
+
 // auto-reload trigger
 
 // reload test Tue Apr 29 22:16:04 +07 2025

@@ -37,5 +37,6 @@ func (pr *UserRouter) InitUserRouter(Router *gin.RouterGroup) {
 		userRouterPrivate.POST("/logout", user.Login.Logout) // Thêm route logout
 		userRouterPrivate.POST("/two-factor/setup", user.TwoFA.SetupTwoFactorAuth)
 		userRouterPrivate.POST("/two-factor/verify", user.TwoFA.VerifyTwoFactorAuth)
+		userRouterPrivate.GET("/list", user.Login.ListUsers) // Thêm route lấy danh sách user
 	}
 }

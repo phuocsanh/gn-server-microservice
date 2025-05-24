@@ -225,4 +225,52 @@ func (c *cUserLogin) Logout(ctx *gin.Context) {
 	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
+// ListUsers documentation
+// @Summary      List Users
+// @Description  Get paginated list of users with optional search
+// @Tags         user management
+// @Accept       json
+// @Produce      json
+// @Param        page query int false "Page number (default: 1)" example(1)
+// @Param        pageSize query int false "Page size (default: 10, max: 100)" example(10)
+// @Param        search query string false "Search by account or nickname" example("john")
+// @Param        Authorization header string true "Bearer token"
+// @Success      200  {object}  response.ResponseData
+// @Failure      401  {object}  response.ErrorResponseData
+// @Router       /user/list [get]
+func (c *cUserLogin) ListUsers(ctx *gin.Context) {
+	// Parse query parameters
+	var req user.ListUsersRequest
+	if err := ctx.ShouldBindQuery(&req); err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
+		return
+	}
+
+	// Validate and set defaults
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+	if req.PageSize > 100 {
+		req.PageSize = 100
+	}
+
+	// Convert to model input
+	modelInput := &model.ListUsersInput{
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		Search:   req.Search,
+	}
+
+	// Call service
+	codeRs, dataRs, err := service.UserLogin().ListUsers(ctx, modelInput)
+	if err != nil {
+		response.ErrorResponse(ctx, codeRs, err.Error())
+		return
+	}
+	response.SuccessResponse(ctx, codeRs, dataRs)
+}
+
 // AUTO-RELOAD LIVE TEST

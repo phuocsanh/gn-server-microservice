@@ -41,3 +41,10 @@ type TwoFactorVerificationRequest struct {
 	VerifyKey  string `json:"verify_key" example:"user@example.com"`
 	VerifyCode string `json:"verify_code" example:"123456"`
 }
+
+// ListUsersRequest định nghĩa cấu trúc cho request lấy danh sách user
+type ListUsersRequest struct {
+	Page     int    `form:"page" json:"page" example:"1"`                    // Trang hiện tại (bắt đầu từ 1)
+	PageSize int    `form:"pageSize" json:"pageSize" example:"10"`           // Số lượng user trên mỗi trang
+	Search   string `form:"search" json:"search" example:"john"`             // Từ khóa tìm kiếm theo tên/email
+}
