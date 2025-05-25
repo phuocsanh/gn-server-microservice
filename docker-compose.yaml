@@ -6,9 +6,9 @@ services:
     image: postgres:15
     container_name: postgres_gn_farm
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
-      POSTGRES_DB: GO_GN_FARM
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-GnFarm2024SecurePass!}
+      POSTGRES_DB: ${POSTGRES_DB:-GO_GN_FARM}
     ports:
       - "5432:5432"
     volumes:
@@ -127,18 +127,27 @@ services:
         "-polling",
       ]
     depends_on:
-      - postgres
-      - redis
-      - broker
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_started
     networks:
       - gn_farm_network
     stdin_open: true
     tty: true
     env_file:
-      - .env
+      - ./gn-farm-go-server/.env
     environment:
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
       SENDER_EMAIL: ${SENDER_EMAIL}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   chat_service:
     container_name: chat_service_gn_farm
@@ -153,25 +162,34 @@ services:
       - chat_node_modules:/app/node_modules
     working_dir: /app
     depends_on:
-      - postgres
-      - redis
-      - mongodb
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
     networks:
       - gn_farm_network
     # Use nodemon for hot reloading in development
     command: ["npm", "run", "dev"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     environment:
       - NODE_ENV=development
       - PORT=3000
       - MONGODB_URI=mongodb://mongo_gn_farm:27017/gn_chat
       - POSTGRES_HOST=postgres_gn_farm
       - POSTGRES_PORT=5432
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=123456
-      - POSTGRES_DB=GO_GN_FARM
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-GnFarm2024SecurePass!}
+      - POSTGRES_DB=${POSTGRES_DB:-GO_GN_FARM}
       - REDIS_HOST=redis_gn_farm
       - REDIS_PORT=6379
-      - JWT_SECRET=xxx.yyy.zzz
+      - JWT_SECRET=${JWT_SECRET:-gn_farm_jwt_secret_2024_change_this_in_production}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-AKIAIOSFODNN7EXAMPLE}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY}
       - AWS_REGION=${AWS_REGION:-ap-southeast-1}

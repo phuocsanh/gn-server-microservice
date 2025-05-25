@@ -10,11 +10,11 @@ import (
 func InitProductService() {
 	queries := database.New(global.Pgdbc)
 
-	// Initialize product services
-	service.Product = wire.InitializeProductService(queries)
-	service.Mushroom = wire.InitializeMushroomService(queries)
-	service.Vegetable = wire.InitializeVegetableService(queries)
-	service.Bonsai = wire.InitializeBonsaiService(queries)
+	// Initialize product services using new interface
+	service.InitProductService(wire.InitializeProductService(queries))
+	service.InitMushroomService(wire.InitializeMushroomService(queries))
+	service.InitVegetableService(wire.InitializeVegetableService(queries))
+	service.InitBonsaiService(wire.InitializeBonsaiService(queries))
 
 	// Initialize product type services
 	service.ProductType = wire.InitializeProductTypeService(queries)

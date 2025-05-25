@@ -1,0 +1,33 @@
+server:
+  port: 8083
+  mode: test
+
+postgres:
+  host: localhost
+  port: 5432
+  username: postgres
+  password: 123456
+  dbname: GO_GN_FARM_TEST
+  maxIdleConns: 5
+  maxOpenConns: 10
+  connMaxLifetime: 3600
+
+redis:
+  host: localhost
+  port: 6379
+  password: # no pw set
+  db: 1 # use test db
+  pool_size: 5
+
+logger:
+  log_level: info
+  file_log_name: "./storages/logs/test.log"
+  max_size: 100
+  max_backups: 1
+  max_age: 7
+  compress: true
+
+jwt:
+  TOKEN_HOUR_LIFESPAN: 1
+  JWT_EXPIRATION: 1h
+  API_SECRET_KEY: "test.secret.key"

@@ -1,8 +1,8 @@
-# Common
+# GN Farm Microservices - Combined .gitignore
+
+# OS specific files
 .DS_Store
 Thumbs.db
-*.log
-npm-debug.log*
 
 # IDE files
 .idea/
@@ -10,23 +10,25 @@ npm-debug.log*
 *.sublime-project
 *.sublime-workspace
 
-# Go specific
+# Logs
+*.log
+npm-debug.log*
+logs/
+storages/logs/
+
+# Environment variables
+.env
+
+# Go specific (gn-farm-go-server)
 docs/
 cmd/cli/
 config/production.yaml
 tmp/
 
-# Node.js specific
+# Node.js specific (gn-chat-service)
 node_modules/
 dist/
 build/
-
-# Environment variables
-.env
-
-# Logs
-logs/
-storages/logs/
 
 # Build output
 bin/

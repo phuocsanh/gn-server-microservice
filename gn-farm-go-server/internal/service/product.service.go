@@ -5,22 +5,23 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+
 	"gn-farm-go-server/internal/database"
-	"gn-farm-go-server/internal/model/product"
+	"gn-farm-go-server/internal/model"
+	"gn-farm-go-server/internal/vo/product"
 )
 
-type ProductService interface {
-	CreateProduct(ctx context.Context, params *database.CreateProductParams) (*database.Product, error)
-	GetProduct(ctx context.Context, id int32) (*database.Product, error)
-	ListProducts(ctx context.Context, limit, offset int32) ([]*database.Product, error)
-	UpdateProduct(ctx context.Context, params *database.UpdateProductParams) (*database.Product, error)
-	DeleteProduct(ctx context.Context, id int32) error
-	SearchProducts(ctx context.Context, query string, limit, offset int32) ([]*database.Product, error)
-	FilterProducts(ctx context.Context, params database.FilterProductsParams) ([]*database.Product, error)
-	GetProductStats(ctx context.Context) (*product.ProductStats, error)
-	BulkUpdateProducts(ctx context.Context, params []database.UpdateProductParams) ([]*database.Product, error)
-	CreateProductWithType(ctx context.Context, productType int32, params interface{}) (*database.Product, error)
-	UpdateProductWithType(ctx context.Context, productType int32, id int32, params interface{}) (*database.Product, error)
+type IProductService interface {
+	CreateProduct(ctx context.Context, in *product.CreateProductRequest) (codeResult int, out product.ProductResponse, err error)
+	GetProduct(ctx context.Context, id int32) (codeResult int, out product.ProductResponse, err error)
+	ListProducts(ctx context.Context, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[product.ProductResponse], err error)
+	ListProductsWithFilter(ctx context.Context, productType *int32, subProductType *int32, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[product.ProductResponse], err error)
+	UpdateProduct(ctx context.Context, id int32, in *product.UpdateProductRequest) (codeResult int, out product.ProductResponse, err error)
+	DeleteProduct(ctx context.Context, id int32) (codeResult int, err error)
+	SearchProducts(ctx context.Context, query string, limit, offset int32) (codeResult int, out []product.ProductResponse, err error)
+	FilterProducts(ctx context.Context, in *product.FilterProductsRequest) (codeResult int, out []product.ProductResponse, err error)
+	GetProductStats(ctx context.Context) (codeResult int, out product.ProductStats, err error)
+	BulkUpdateProducts(ctx context.Context, in []product.UpdateProductRequest) (codeResult int, out []product.ProductResponse, err error)
 }
 
 // Các interface này được giữ lại để tương thích với code hiện tại
@@ -103,8 +104,24 @@ type BonsaiAttributes struct {
 }
 
 var (
-	Product   ProductService
+	Product   IProductService
 	Mushroom  MushroomService
 	Vegetable VegetableService
 	Bonsai    BonsaiService
 )
+
+func InitProductService(productService IProductService) {
+	Product = productService
+}
+
+func InitMushroomService(mushroomService MushroomService) {
+	Mushroom = mushroomService
+}
+
+func InitVegetableService(vegetableService VegetableService) {
+	Vegetable = vegetableService
+}
+
+func InitBonsaiService(bonsaiService BonsaiService) {
+	Bonsai = bonsaiService
+}

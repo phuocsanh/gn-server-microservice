@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/vo/product"
+	"gn-farm-go-server/pkg/response"
 )
 
 // productTypeService implements service.ProductTypeService
@@ -17,50 +19,105 @@ func NewProductTypeService(db *database.Queries) service.ProductTypeService {
 	return &productTypeService{db: db}
 }
 
-func (s *productTypeService) GetProductType(ctx context.Context, id int32) (*database.ProductType, error) {
-	productType, err := s.db.GetProductType(ctx, id)
+func (s *productTypeService) GetProductType(ctx context.Context, id int32) (codeResult int, out product.ProductTypeResponse, err error) {
+	dbProductType, err := s.db.GetProductType(ctx, id)
 	if err != nil {
-		return nil, err
+		return response.ErrCodeInternalServerError, out, err
 	}
-	return &productType, nil
+
+	// Convert to response format
+	out = product.ProductTypeResponse{
+		ID:          dbProductType.ID,
+		Name:        dbProductType.Name,
+		Description: convertSqlNullStringToNull(dbProductType.Description),
+		ImageURL:    convertSqlNullStringToNull(dbProductType.ImageUrl),
+		CreatedAt:   dbProductType.CreatedAt,
+		UpdatedAt:   dbProductType.UpdatedAt,
+	}
+
+	return response.ErrCodeSuccess, out, nil
 }
 
-func (s *productTypeService) ListProductTypes(ctx context.Context) ([]*database.ProductType, error) {
-	productTypes, err := s.db.ListProductTypes(ctx)
+func (s *productTypeService) ListProductTypes(ctx context.Context) (codeResult int, out []product.ProductTypeResponse, err error) {
+	// SQLC best practice: Return slice of values directly, no manual pointer conversion
+	dbProductTypes, err := s.db.ListProductTypes(ctx)
 	if err != nil {
-		return nil, err
+		return response.ErrCodeInternalServerError, nil, err
 	}
-	result := make([]*database.ProductType, len(productTypes))
-	for i := range productTypes {
-		result[i] = &productTypes[i]
+
+	// Convert to response format
+	out = make([]product.ProductTypeResponse, len(dbProductTypes))
+	for i, pt := range dbProductTypes {
+		out[i] = product.ProductTypeResponse{
+			ID:          pt.ID,
+			Name:        pt.Name,
+			Description: convertSqlNullStringToNull(pt.Description),
+			ImageURL:    convertSqlNullStringToNull(pt.ImageUrl),
+			CreatedAt:   pt.CreatedAt,
+			UpdatedAt:   pt.UpdatedAt,
+		}
 	}
-	return result, nil
+
+	return response.ErrCodeSuccess, out, nil
 }
 
-func (s *productTypeService) CreateProductType(ctx context.Context, name, description string) (*database.ProductType, error) {
+func (s *productTypeService) CreateProductType(ctx context.Context, req *product.ProductTypeRequest) (codeResult int, out product.ProductTypeResponse, err error) {
 	params := database.CreateProductTypeParams{
-		Name:        name,
-		Description: sql.NullString{String: description, Valid: description != ""},
+		Name:        req.Name,
+		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
+		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
 	}
-	productType, err := s.db.CreateProductType(ctx, params)
+
+	dbProductType, err := s.db.CreateProductType(ctx, params)
 	if err != nil {
-		return nil, err
+		return response.ErrCodeInternalServerError, out, err
 	}
-	return &productType, nil
+
+	// Convert to response format
+	out = product.ProductTypeResponse{
+		ID:          dbProductType.ID,
+		Name:        dbProductType.Name,
+		Description: convertSqlNullStringToNull(dbProductType.Description),
+		ImageURL:    convertSqlNullStringToNull(dbProductType.ImageUrl),
+		CreatedAt:   dbProductType.CreatedAt,
+		UpdatedAt:   dbProductType.UpdatedAt,
+	}
+
+	return response.ErrCodeSuccess, out, nil
 }
 
-func (s *productTypeService) UpdateProductType(ctx context.Context, id int32, name, description string) (*database.ProductType, error) {
+func (s *productTypeService) UpdateProductType(ctx context.Context, id int32, req *product.ProductTypeRequest) (codeResult int, out product.ProductTypeResponse, err error) {
 	params := database.UpdateProductTypeParams{
 		ID:          id,
-		Name:        name,
+		Name:        req.Name,
+		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
+		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
 	}
-	productType, err := s.db.UpdateProductType(ctx, params)
+
+	dbProductType, err := s.db.UpdateProductType(ctx, params)
 	if err != nil {
-		return nil, err
+		return response.ErrCodeInternalServerError, out, err
 	}
-	return &productType, nil
+
+	// Convert to response format
+	out = product.ProductTypeResponse{
+		ID:          dbProductType.ID,
+		Name:        dbProductType.Name,
+		Description: convertSqlNullStringToNull(dbProductType.Description),
+		ImageURL:    convertSqlNullStringToNull(dbProductType.ImageUrl),
+		CreatedAt:   dbProductType.CreatedAt,
+		UpdatedAt:   dbProductType.UpdatedAt,
+	}
+
+	return response.ErrCodeSuccess, out, nil
 }
 
-func (s *productTypeService) DeleteProductType(ctx context.Context, id int32) error {
-	return s.db.DeleteProductType(ctx, id)
+func (s *productTypeService) DeleteProductType(ctx context.Context, id int32) (codeResult int, err error) {
+	err = s.db.DeleteProductType(ctx, id)
+	if err != nil {
+		return response.ErrCodeInternalServerError, err
+	}
+	return response.ErrCodeSuccess, nil
 }
+
+

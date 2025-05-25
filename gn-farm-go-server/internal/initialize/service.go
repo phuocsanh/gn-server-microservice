@@ -8,9 +8,9 @@ import (
 // InitServiceInterface initializes all service interfaces
 func InitServiceInterface() {
 	// Initialize user services
-	userLogin, err := wire.InitUserLoginService()
+	userAuth, err := wire.InitUserAuthService()
 	if err != nil {
 		panic(err)
 	}
-	service.InitUserLogin(userLogin)
+	service.InitUserAuth(userAuth)
 }

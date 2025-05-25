@@ -4,21 +4,21 @@
 package wire
 
 import (
-        "gn-farm-go-server/internal/database"
-        "gn-farm-go-server/internal/service"
-        "gn-farm-go-server/internal/service/impl/product"
+	"gn-farm-go-server/internal/database"
+	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/impl/product"
 
-        "github.com/google/wire"
+	"github.com/google/wire"
 )
 
 var productSet = wire.NewSet(
-        product.NewProductService,
+        product.NewProductServiceImpl,
         product.NewMushroomService,
         product.NewVegetableService,
         product.NewBonsaiService,
 )
 
-func InitializeProductService(db *database.Queries) service.ProductService {
+func InitializeProductService(db *database.Queries) service.IProductService {
         wire.Build(productSet)
         return nil
 }

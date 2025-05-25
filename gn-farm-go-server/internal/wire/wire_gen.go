@@ -16,11 +16,28 @@ import (
 	"gn-farm-go-server/internal/service/impl/user"
 )
 
+// Injectors from product-type.wire.go:
+
+func InitializeProductTypeService(db *database.Queries) service.ProductTypeService {
+	productTypeService := product.NewProductTypeService(db)
+	return productTypeService
+}
+
+func InitializeProductSubtypeService(db *database.Queries) service.ProductSubtypeService {
+	productSubtypeService := product.NewProductSubtypeService(db)
+	return productSubtypeService
+}
+
+func InitializeProductSubtypeRelationService(db *database.Queries) service.ProductSubtypeRelationService {
+	productSubtypeRelationService := product.NewProductSubtypeRelationService(db)
+	return productSubtypeRelationService
+}
+
 // Injectors from product.wire.go:
 
-func InitializeProductService(db *database.Queries) service.ProductService {
-	productService := product.NewProductService(db)
-	return productService
+func InitializeProductService(db *database.Queries) service.IProductService {
+	iProductService := product.NewProductServiceImpl(db)
+	return iProductService
 }
 
 func InitializeMushroomService(db *database.Queries) service.MushroomService {
@@ -38,43 +55,26 @@ func InitializeBonsaiService(db *database.Queries) service.BonsaiService {
 	return bonsaiService
 }
 
-// Injectors from product_type.wire.go:
-
-func InitializeProductTypeService(db *database.Queries) service.ProductTypeService {
-	productTypeService := product.NewProductTypeService(db)
-	return productTypeService
-}
-
-func InitializeProductSubtypeService(db *database.Queries) service.ProductSubtypeService {
-	productSubtypeService := product.NewProductSubtypeService(db)
-	return productSubtypeService
-}
-
-func InitializeProductSubtypeRelationService(db *database.Queries) service.ProductSubtypeRelationService {
-	productSubtypeRelationService := product.NewProductSubtypeRelationService(db)
-	return productSubtypeRelationService
-}
-
 // Injectors from user.wire.go:
 
-// Initialize only the necessary dependencies for UserLogin service registration
+// Initialize only the necessary dependencies for UserAuth service registration
 // This function might not need to return anything specific for the current router setup,
-// as controllers access the service via global functions (service.UserLogin()).
+// as controllers access the service via global functions (service.UserAuth()).
 // Returning an error ensures dependencies were built correctly.
-func InitUserLoginService() (service.IUserLogin, error) {
+func InitUserAuthService() (service.IUserAuth, error) {
 	db := NewPostgresDB()
 	queries := database.New(db)
-	sUserLogin := user.NewUserLoginImpl(queries)
-	return sUserLogin, nil
+	sUserAuth := user.NewUserAuthImpl(queries)
+	return sUserAuth, nil
 }
+
+// product-type.wire.go:
+
+var productTypeSet = wire.NewSet(product.NewProductTypeService, product.NewProductSubtypeService, product.NewProductSubtypeRelationService)
 
 // product.wire.go:
 
-var productSet = wire.NewSet(product.NewProductService, product.NewMushroomService, product.NewVegetableService, product.NewBonsaiService)
-
-// product_type.wire.go:
-
-var productTypeSet = wire.NewSet(product.NewProductTypeService, product.NewProductSubtypeService, product.NewProductSubtypeRelationService)
+var productSet = wire.NewSet(product.NewProductServiceImpl, product.NewMushroomService, product.NewVegetableService, product.NewBonsaiService)
 
 // user.wire.go:
 
@@ -83,8 +83,8 @@ var dbProviderSet = wire.NewSet(
 	NewPostgresDB, database.New, wire.Bind(new(database.DBTX), new(*sql.DB)),
 )
 
-// Service provider set for User Login
-var userLoginServiceSet = wire.NewSet(user.NewUserLoginImpl, wire.Bind(new(service.IUserLogin), new(*user.SUserLogin)))
+// Service provider set for User Auth
+var userAuthServiceSet = wire.NewSet(user.NewUserAuthImpl, wire.Bind(new(service.IUserAuth), new(*user.SUserAuth)))
 
 // --- Helper function for DB (Example) ---
 // You should have a proper way to provide your DB connection.

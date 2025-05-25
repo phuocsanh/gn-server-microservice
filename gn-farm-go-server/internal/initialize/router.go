@@ -2,6 +2,8 @@ package initialize
 
 import (
 	"gn-farm-go-server/global"
+	"gn-farm-go-server/internal/controller/health"
+	"gn-farm-go-server/internal/middlewares"
 	"gn-farm-go-server/internal/routers"
 
 	"github.com/gin-gonic/gin"
@@ -18,12 +20,19 @@ func InitRouter() *gin.Engine {
 		r = gin.New()
 	}
 	// middlewares
-	// r.Use() // logging
+	r.Use(middlewares.ErrorHandler())
+	r.Use(middlewares.LoggingMiddleware())
+	r.Use(middlewares.RequestResponseLoggingMiddleware())
 	// r.Use() // cross
 	// r.Use() // limiter global
 	manageRouter := routers.RouterGroupApp.Manage
 	userRouterGroup := routers.RouterGroupApp.User
 	productRouterGroup := routers.RouterGroupApp.Product
+
+	// Health check endpoints (outside versioned API)
+	r.GET("/health", health.Health.HealthCheck)
+	r.GET("/ready", health.Health.ReadinessCheck)
+	r.GET("/live", health.Health.LivenessCheck)
 
 	MainGroup := r.Group("/v1")
 	{

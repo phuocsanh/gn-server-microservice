@@ -28,16 +28,38 @@ INSERT INTO products (
 -- name: GetProduct :one
 SELECT * FROM products WHERE id = $1;
 
+-- name: CountProducts :one
+SELECT COUNT(*) FROM products WHERE is_published = true;
+
 -- name: ListProducts :many
-SELECT * FROM products 
+SELECT * FROM products
 WHERE is_published = true
 ORDER BY created_at DESC
-LIMIT $1
+LIMIT CASE WHEN $1 = 0 THEN NULL ELSE $1 END
 OFFSET $2;
+
+-- name: ListProductsWithFilter :many
+SELECT * FROM products
+WHERE is_published = true
+AND (
+    CASE
+        WHEN sqlc.narg('product_type')::integer IS NOT NULL THEN product_type = sqlc.narg('product_type')::integer
+        ELSE true
+    END
+)
+AND (
+    CASE
+        WHEN sqlc.narg('sub_product_type')::integer IS NOT NULL THEN sqlc.narg('sub_product_type')::integer = ANY(sub_product_type)
+        ELSE true
+    END
+)
+ORDER BY created_at DESC
+LIMIT CASE WHEN sqlc.arg('limit') = 0 THEN NULL ELSE sqlc.arg('limit') END
+OFFSET sqlc.arg('offset');
 
 -- name: UpdateProduct :one
 UPDATE products
-SET 
+SET
     product_name = $2,
     product_price = $3,
     product_status = $4,
@@ -65,41 +87,41 @@ RETURNING *;
 DELETE FROM products WHERE id = $1;
 
 -- name: SearchProducts :many
-SELECT * FROM products 
-WHERE is_published = true 
+SELECT * FROM products
+WHERE is_published = true
 AND (
-    product_name ILIKE $1 
-    OR product_description ILIKE $1
+    product_name ILIKE '%' || $1 || '%'
+    OR product_description ILIKE '%' || $1 || '%'
 )
 ORDER BY created_at DESC
 LIMIT $2
 OFFSET $3;
 
 -- name: FilterProducts :many
-SELECT * FROM products 
+SELECT * FROM products
 WHERE is_published = true
 AND (
-    CASE 
-        WHEN sqlc.narg('category')::text IS NOT NULL THEN product_type = sqlc.narg('category')::text
+    CASE
+        WHEN sqlc.narg('category')::integer IS NOT NULL THEN product_type = sqlc.narg('category')::integer
         ELSE true
     END
 )
 AND (
-    CASE 
-        WHEN sqlc.narg('min_price')::decimal IS NOT NULL THEN product_price >= sqlc.narg('min_price')::decimal
+    CASE
+        WHEN sqlc.narg('min_price')::text IS NOT NULL THEN product_price::numeric >= sqlc.narg('min_price')::numeric
         ELSE true
     END
 )
 AND (
-    CASE 
-        WHEN sqlc.narg('max_price')::decimal IS NOT NULL THEN product_price <= sqlc.narg('max_price')::decimal
+    CASE
+        WHEN sqlc.narg('max_price')::text IS NOT NULL THEN product_price::numeric <= sqlc.narg('max_price')::numeric
         ELSE true
     END
 )
 AND (
-    CASE 
-        WHEN sqlc.narg('in_stock')::boolean IS NOT NULL THEN 
-            CASE 
+    CASE
+        WHEN sqlc.narg('in_stock')::boolean IS NOT NULL THEN
+            CASE
                 WHEN sqlc.narg('in_stock')::boolean = true THEN product_quantity > 0
                 ELSE product_quantity = 0
             END
@@ -107,40 +129,40 @@ AND (
     END
 )
 ORDER BY
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'price' AND sqlc.narg('sort_order')::text = 'asc' THEN product_price
     END ASC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'price' AND sqlc.narg('sort_order')::text = 'desc' THEN product_price
     END DESC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'name' AND sqlc.narg('sort_order')::text = 'asc' THEN product_name
     END ASC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'name' AND sqlc.narg('sort_order')::text = 'desc' THEN product_name
     END DESC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'created_at' AND sqlc.narg('sort_order')::text = 'asc' THEN created_at
     END ASC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text = 'created_at' AND sqlc.narg('sort_order')::text = 'desc' THEN created_at
     END DESC,
-    CASE 
+    CASE
         WHEN sqlc.narg('sort_by')::text IS NULL THEN created_at
     END DESC
 LIMIT sqlc.arg('limit')
 OFFSET sqlc.arg('offset');
 
 -- name: GetProductStats :one
-SELECT 
+SELECT
     COUNT(*) as total_products,
     COUNT(CASE WHEN product_quantity > 0 THEN 1 END) as in_stock_products,
     COUNT(CASE WHEN product_quantity = 0 THEN 1 END) as out_of_stock_products,
-    SUM(product_selled) as total_products_sold,
-    AVG(product_ratings_average) as average_rating,
-    MIN(product_price) as min_price,
-    MAX(product_price) as max_price,
-    AVG(product_price) as avg_price,
+    COALESCE(SUM(product_selled), 0) as total_products_sold,
+    COALESCE(AVG(product_ratings_average::numeric), 0) as average_rating,
+    COALESCE(MIN(product_price::numeric), 0) as min_price,
+    COALESCE(MAX(product_price::numeric), 0) as max_price,
+    COALESCE(AVG(product_price::numeric), 0) as avg_price,
     COUNT(DISTINCT product_type) as total_categories
 FROM products
-WHERE is_published = true; 
+WHERE is_published = true;

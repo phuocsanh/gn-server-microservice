@@ -20,11 +20,11 @@ func (pr *UserRouter) InitUserRouter(Router *gin.RouterGroup) {
 	userRouterPublic := Router.Group("/user")
 	{
 		// userRouterPublic.POST("/register", userController.Register) // register -> YES -> No
-		userRouterPublic.POST("/register", user.Login.Register)
-		userRouterPublic.POST("/verify-otp", user.Login.VerifyOTP)
-		userRouterPublic.POST("/update-pass-register", user.Login.UpdatePasswordRegister)
-		userRouterPublic.POST("/login", user.Login.Login) // login -> YES -> No
-		userRouterPublic.POST("/refresh-token", user.Login.RefreshToken) // refresh token
+		userRouterPublic.POST("/register", user.Auth.Register)
+		userRouterPublic.POST("/verify-otp", user.Auth.VerifyOTP)
+		userRouterPublic.POST("/update-pass-register", user.Auth.UpdatePasswordRegister)
+		userRouterPublic.POST("/login", user.Auth.Login) // login -> YES -> No
+		userRouterPublic.POST("/refresh-token", user.Auth.RefreshToken) // refresh token
 	}
 	// private router
 	userRouterPrivate := Router.Group("/user")
@@ -34,9 +34,9 @@ func (pr *UserRouter) InitUserRouter(Router *gin.RouterGroup) {
 	// userRouterPrivate.Use(Permission())
 	{
 		// Removed GET /get_info as it used the old userController
-		userRouterPrivate.POST("/logout", user.Login.Logout) // Thêm route logout
+		userRouterPrivate.POST("/logout", user.Auth.Logout) // Thêm route logout
 		userRouterPrivate.POST("/two-factor/setup", user.TwoFA.SetupTwoFactorAuth)
 		userRouterPrivate.POST("/two-factor/verify", user.TwoFA.VerifyTwoFactorAuth)
-		userRouterPrivate.GET("/list", user.Login.ListUsers) // Thêm route lấy danh sách user
+		userRouterPrivate.GET("/list", user.Auth.ListUsers) // Thêm route lấy danh sách user
 	}
 }

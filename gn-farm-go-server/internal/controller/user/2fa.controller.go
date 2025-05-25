@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"gn-farm-go-server/internal/model"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/vo/user"
 	"gn-farm-go-server/pkg/response"
@@ -42,9 +41,9 @@ func (c *sUser2FA) SetupTwoFactorAuth(ctx *gin.Context) {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
-	
-	// Convert to model input
-	params := model.SetupTwoFactorAuthInput{
+
+	// Convert to service input (add UserId from JWT)
+	params := user.SetupTwoFactorAuthServiceRequest{
 		TwoFactorAuthType: req.TwoFactorAuthType,
 		TwoFactorEmail:    req.TwoFactorEmail,
 	}
@@ -66,7 +65,7 @@ func (c *sUser2FA) SetupTwoFactorAuth(ctx *gin.Context) {
 	params.UserId = uint32(userId)
 
 	// Call service
-	code, err := service.UserLogin().SetupTwoFactorAuth(ctx, &params)
+	code, err := service.UserAuth().SetupTwoFactorAuth(ctx, &params)
 	if err != nil {
 		response.ErrorResponse(ctx, code, err.Error())
 		return
@@ -100,9 +99,9 @@ func (c *sUser2FA) VerifyTwoFactorAuth(ctx *gin.Context) {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
-	
-	// Convert to model input
-	params := model.TwoFactorVerificationInput{
+
+	// Convert to DTO input
+	params := user.TwoFactorVerificationServiceRequest{
 		TwoFactorCode: req.VerifyCode,
 	}
 
@@ -123,7 +122,7 @@ func (c *sUser2FA) VerifyTwoFactorAuth(ctx *gin.Context) {
 	params.UserId = uint32(userId)
 
 	// Call service
-	code, err := service.UserLogin().VerifyTwoFactorAuth(ctx, &params)
+	code, err := service.UserAuth().VerifyTwoFactorAuth(ctx, &params)
 	if err != nil {
 		response.ErrorResponse(ctx, code, err.Error())
 		return

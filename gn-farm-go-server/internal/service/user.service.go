@@ -3,29 +3,31 @@ package service
 import (
 	"context"
 
+	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/model"
+	"gn-farm-go-server/internal/vo/user"
 )
 
 type (
 	//.. interface
-	IUserLogin interface {
-		Login(ctx context.Context, in *model.LoginInput) (codeResult int, out model.LoginOutput, err error)
-		Register(ctx context.Context, in *model.RegisterInput) (codeResult int, err error)
-		VerifyOTP(ctx context.Context, in *model.VerifyInput) (out model.VerifyOTPOutput, err error)
+	IUserAuth interface {
+		Login(ctx context.Context, in *user.LoginRequest) (codeResult int, out user.LoginResponse, err error)
+		Register(ctx context.Context, in *user.RegisterRequest) (codeResult int, err error)
+		VerifyOTP(ctx context.Context, in *user.VerifyOTPRequest) (out user.VerifyOTPResponse, err error)
 		UpdatePasswordRegister(ctx context.Context, token string, password string) (codeResult int, userId int64, err error)
-		RefreshToken(ctx context.Context, refreshToken string) (codeResult int, out model.RefreshTokenOutput, err error)
-		Logout(ctx context.Context, token string) (codeResult int, out model.LogoutOutput, err error)
+		RefreshToken(ctx context.Context, refreshToken string) (codeResult int, out user.RefreshTokenResponse, err error)
+		Logout(ctx context.Context, token string) (codeResult int, out user.LogoutResponse, err error)
 
 		// two-factor authentication
 		IsTwoFactorEnabled(ctx context.Context, userId int32) (codeResult int, rs bool, err error)
 		// setup authentication
-		SetupTwoFactorAuth(ctx context.Context, in *model.SetupTwoFactorAuthInput) (codeResult int, err error)
+		SetupTwoFactorAuth(ctx context.Context, in *user.SetupTwoFactorAuthServiceRequest) (codeResult int, err error)
 
 		// Verify Two Factor Authentication
-		VerifyTwoFactorAuth(ctx context.Context, in *model.TwoFactorVerificationInput) (codeResult int, err error)
+		VerifyTwoFactorAuth(ctx context.Context, in *user.TwoFactorVerificationServiceRequest) (codeResult int, err error)
 
 		// List users with pagination and search
-		ListUsers(ctx context.Context, in *model.ListUsersInput) (codeResult int, out model.ListUsersOutput, err error)
+		ListUsers(ctx context.Context, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[database.UserProfile], err error)
 	}
 
 	IUserInfo interface {
@@ -42,7 +44,7 @@ type (
 var (
 	localUserAdmin IUserAdmin
 	localUserInfo  IUserInfo
-	localUserLogin IUserLogin
+	localUserAuth  IUserAuth
 )
 
 func UserAdmin() IUserAdmin {
@@ -67,13 +69,13 @@ func InitUserInfo(i IUserInfo) {
 	localUserInfo = i
 }
 
-func UserLogin() IUserLogin {
-	if localUserLogin == nil {
-		panic("implement localUserLogin not found for interface IUserLogin")
+func UserAuth() IUserAuth {
+	if localUserAuth == nil {
+		panic("implement localUserAuth not found for interface IUserAuth")
 	}
-	return localUserLogin
+	return localUserAuth
 }
 
-func InitUserLogin(i IUserLogin) {
-	localUserLogin = i
+func InitUserAuth(i IUserAuth) {
+	localUserAuth = i
 }

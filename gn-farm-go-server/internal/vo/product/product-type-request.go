@@ -4,6 +4,7 @@ package product
 type ProductTypeRequest struct {
 	Name        string `json:"name" example:"Organic Vegetables"`
 	Description string `json:"description" example:"All types of organic vegetables"`
+	ImageURL    string `json:"image_url" example:"https://example.com/images/organic-vegetables.jpg"`
 }
 
 // ProductSubtypeRequest đại diện cho yêu cầu tạo loại phụ sản phẩm
@@ -14,6 +15,7 @@ type ProductSubtypeRequest struct {
 
 // ProductSubtypeMappingRequest đại diện cho yêu cầu ánh xạ loại phụ sản phẩm với loại sản phẩm
 type ProductSubtypeMappingRequest struct {
-	ProductTypeID    int32 `json:"productTypeId" example:"1"`
-	ProductSubtypeID int32 `json:"productSubtypeId" example:"1"`
+	ProductTypeID    int32 `json:"product_type_id" example:"1"`
+	ProductSubtypeID int32 `json:"product_subtype_id" example:"1"`
 }
+

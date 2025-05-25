@@ -42,9 +42,19 @@ type TwoFactorVerificationRequest struct {
 	VerifyCode string `json:"verify_code" example:"123456"`
 }
 
-// ListUsersRequest định nghĩa cấu trúc cho request lấy danh sách user
-type ListUsersRequest struct {
-	Page     int    `form:"page" json:"page" example:"1"`                    // Trang hiện tại (bắt đầu từ 1)
-	PageSize int    `form:"pageSize" json:"pageSize" example:"10"`           // Số lượng user trên mỗi trang
-	Search   string `form:"search" json:"search" example:"john"`             // Từ khóa tìm kiếm theo tên/email
+// =============================================================================
+// SERVICE LAYER TYPES (Internal use only - include additional context like UserId from JWT)
+// =============================================================================
+
+// SetupTwoFactorAuthServiceRequest for service layer (includes UserId from JWT)
+type SetupTwoFactorAuthServiceRequest struct {
+	UserId            uint32 `json:"user_id"`
+	TwoFactorAuthType string `json:"two_factor_auth_type"`
+	TwoFactorEmail    string `json:"two_factor_email"`
+}
+
+// TwoFactorVerificationServiceRequest for service layer (includes UserId from JWT)
+type TwoFactorVerificationServiceRequest struct {
+	UserId        uint32 `json:"user_id"`
+	TwoFactorCode string `json:"two_factor_code"`
 }

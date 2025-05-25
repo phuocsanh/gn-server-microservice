@@ -3,13 +3,14 @@
 package wire
 
 import (
-        "database/sql" // Assuming DB provider returns *sql.DB
+	"database/sql" // Assuming DB provider returns *sql.DB
 
-        "gn-farm-go-server/global"
-        "gn-farm-go-server/internal/database"
-        "gn-farm-go-server/internal/service"
-        "gn-farm-go-server/internal/service/impl/user"
-        "github.com/google/wire"
+	"gn-farm-go-server/global"
+	"gn-farm-go-server/internal/database"
+	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/impl/user"
+
+	"github.com/google/wire"
 )
 
 // Database provider set (Example - replace with your actual DB provider)
@@ -20,28 +21,28 @@ var dbProviderSet = wire.NewSet(
         wire.Bind(new(database.DBTX), new(*sql.DB)),
 )
 
-// Service provider set for User Login
-var userLoginServiceSet = wire.NewSet(
-        user.NewUserLoginImpl,
+// Service provider set for User Auth
+var userAuthServiceSet = wire.NewSet(
+        user.NewUserAuthImpl,
         // Bind the implementation to the interface
-        // Ensure sUserLogin is exported (SUserLogin) in impl package
-        wire.Bind(new(service.IUserLogin), new(*user.SUserLogin)), // Use exported SUserLogin
+        // Ensure sUserAuth is exported (SUserAuth) in impl package
+        wire.Bind(new(service.IUserAuth), new(*user.SUserAuth)), // Use exported SUserAuth
 )
 
-// Initialize only the necessary dependencies for UserLogin service registration
+// Initialize only the necessary dependencies for UserAuth service registration
 // This function might not need to return anything specific for the current router setup,
-// as controllers access the service via global functions (service.UserLogin()).
+// as controllers access the service via global functions (service.UserAuth()).
 // Returning an error ensures dependencies were built correctly.
-func InitUserLoginService() (service.IUserLogin, error) {
+func InitUserAuthService() (service.IUserAuth, error) {
         wire.Build(
                 dbProviderSet,
-                userLoginServiceSet,
-                // We don't explicitly call service.InitUserLogin here.
-                // Wire handles injecting the created IUserLogin implementation where needed,
-                // or we can call InitUserLogin manually after this function returns.
-                // Let's assume manual initialization for now or reliance on wire injection if IUserLogin is requested elsewhere.
+                userAuthServiceSet,
+                // We don't explicitly call service.InitUserAuth here.
+                // Wire handles injecting the created IUserAuth implementation where needed,
+                // or we can call InitUserAuth manually after this function returns.
+                // Let's assume manual initialization for now or reliance on wire injection if IUserAuth is requested elsewhere.
         )
-        // The return value isn't strictly necessary if InitUserLogin is called manually later,
+        // The return value isn't strictly necessary if InitUserAuth is called manually later,
         // but Wire requires a return value matching one of the providers.
         return nil, nil // Return nil for now, actual instance is created by Wire
 }

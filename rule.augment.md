@@ -1,0 +1,1 @@
+- Khi thực hiện hay chỉnh sửa chức năng luôn tìm kiếm giải pháp tốt nhất rồi mới thực hiện, luôn kiểm tra lỗi sau khi làm xong, và muốn tạo file hay folder mới phải hỏi user trước.

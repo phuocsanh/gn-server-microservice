@@ -25,28 +25,24 @@ func (s *productSubtypeService) GetProductSubtype(ctx context.Context, id int32)
 	return &productSubtype, nil
 }
 
-func (s *productSubtypeService) ListProductSubtypes(ctx context.Context) ([]*database.ProductSubtype, error) {
+func (s *productSubtypeService) ListProductSubtypes(ctx context.Context) ([]database.ProductSubtype, error) {
+	// SQLC best practice: Return slice of values directly, no manual pointer conversion
 	productSubtypes, err := s.db.ListProductSubtypes(ctx)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*database.ProductSubtype, len(productSubtypes))
-	for i := range productSubtypes {
-		result[i] = &productSubtypes[i]
-	}
-	return result, nil
+	// Return slice of values directly - optimal for performance
+	return productSubtypes, nil
 }
 
-func (s *productSubtypeService) ListProductSubtypesByType(ctx context.Context, productTypeID int32) ([]*database.ProductSubtype, error) {
+func (s *productSubtypeService) ListProductSubtypesByType(ctx context.Context, productTypeID int32) ([]database.ProductSubtype, error) {
+	// SQLC best practice: Return slice of values directly, no manual pointer conversion
 	productSubtypes, err := s.db.ListProductSubtypesByType(ctx, productTypeID)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*database.ProductSubtype, len(productSubtypes))
-	for i := range productSubtypes {
-		result[i] = &productSubtypes[i]
-	}
-	return result, nil
+	// Return slice of values directly - optimal for performance
+	return productSubtypes, nil
 }
 
 func (s *productSubtypeService) CreateProductSubtype(ctx context.Context, name, description string) (*database.ProductSubtype, error) {

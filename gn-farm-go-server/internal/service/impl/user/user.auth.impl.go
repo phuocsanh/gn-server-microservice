@@ -20,20 +20,21 @@ import (
 	"gn-farm-go-server/internal/utils/crypto"
 	"gn-farm-go-server/internal/utils/random"
 	"gn-farm-go-server/internal/utils/sendto"
+	"gn-farm-go-server/internal/vo/user"
 	"gn-farm-go-server/pkg/response"
 
 	"github.com/redis/go-redis/v9"
 )
 
 // Changed struct name to be exported
-type SUserLogin struct {
-	// Implement the IUserLogin interface here
+type SUserAuth struct {
+	// Implement the IUserAuth interface here
 	r *database.Queries
 }
 
 // Changed constructor name to match exported struct
-func NewUserLoginImpl(r *database.Queries) *SUserLogin {
-	return &SUserLogin{
+func NewUserAuthImpl(r *database.Queries) *SUserAuth {
+	return &SUserAuth{
 		r: r,
 	}
 }
@@ -41,7 +42,7 @@ func NewUserLoginImpl(r *database.Queries) *SUserLogin {
 // ---- TWO FACTOR AUTHEN -----
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) IsTwoFactorEnabled(ctx context.Context, userId int32) (codeResult int, rs bool, err error) {
+func (s *SUserAuth) IsTwoFactorEnabled(ctx context.Context, userId int32) (codeResult int, rs bool, err error) {
 	count, err := s.r.IsTwoFactorEnabled(ctx, userId)
 	if err != nil {
 		return response.ErrCodeAuthFailed, false, fmt.Errorf("failed to check 2FA status: %v", err)
@@ -50,7 +51,7 @@ func (s *SUserLogin) IsTwoFactorEnabled(ctx context.Context, userId int32) (code
 }
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) SetupTwoFactorAuth(ctx context.Context, in *model.SetupTwoFactorAuthInput) (codeResult int, err error) {
+func (s *SUserAuth) SetupTwoFactorAuth(ctx context.Context, in *user.SetupTwoFactorAuthServiceRequest) (codeResult int, err error) {
 	// Logic
 	// 1. Check isTwoFactorEnabled -> true return
 	code, enabled, err := s.IsTwoFactorEnabled(ctx, int32(in.UserId))
@@ -80,7 +81,7 @@ func (s *SUserLogin) SetupTwoFactorAuth(ctx context.Context, in *model.SetupTwoF
 }
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) VerifyTwoFactorAuth(ctx context.Context, in *model.TwoFactorVerificationInput) (codeResult int, err error) {
+func (s *SUserAuth) VerifyTwoFactorAuth(ctx context.Context, in *user.TwoFactorVerificationServiceRequest) (codeResult int, err error) {
 	// 1. Check isTwoFactorEnabled
 	code, _, err := s.IsTwoFactorEnabled(ctx, int32(in.UserId))
 	if err != nil {
@@ -124,7 +125,7 @@ func (s *SUserLogin) VerifyTwoFactorAuth(ctx context.Context, in *model.TwoFacto
 // ---- END TWO FACTOR AUTHEN ----
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) Login(ctx context.Context, in *model.LoginInput) (codeResult int, out model.LoginOutput, err error) {
+func (s *SUserAuth) Login(ctx context.Context, in *user.LoginRequest) (codeResult int, out user.LoginResponse, err error) {
 	fmt.Println("Login called with userAccount:", in.UserAccount, "and userPassword:", in.UserPassword)
 	// 1. logic login
 	userBase, err := s.r.GetOneUserInfo(ctx, in.UserAccount)
@@ -221,9 +222,10 @@ func (s *SUserLogin) Login(ctx context.Context, in *model.LoginInput) (codeResul
 
 	// 10. Gán giá trị vào output theo cấu trúc mới
 	// Thông tin người dùng
-	out.User.ID = fmt.Sprintf("%v", userInfo["user_id"])
-	out.User.Email = fmt.Sprintf("%v", userInfo["user_account"])
-	out.User.Name = fmt.Sprintf("%v", userInfo["user_account"]) // Tạm thời dùng email làm tên
+	userIdInt, _ := userInfo["user_id"].(float64)
+	out.User.UserID = int64(userIdInt)
+	out.User.UserAccount = fmt.Sprintf("%v", userInfo["user_account"])
+	out.User.UserEmail = fmt.Sprintf("%v", userInfo["user_account"]) // Tạm thời dùng account làm email
 
 	// Thông tin token
 	out.Tokens.AccessToken = tokenPair.AccessToken
@@ -237,7 +239,7 @@ func (s *SUserLogin) Login(ctx context.Context, in *model.LoginInput) (codeResul
 }
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) Register(ctx context.Context, in *model.RegisterInput) (codeResult int, err error) {
+func (s *SUserAuth) Register(ctx context.Context, in *user.RegisterRequest) (codeResult int, err error) {
 	// logic
 	// 1. hash email
 	fmt.Printf("VerifyKey: %s\n", in.VerifyKey)
@@ -341,7 +343,7 @@ func (s *SUserLogin) Register(ctx context.Context, in *model.RegisterInput) (cod
 }
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) VerifyOTP(ctx context.Context, in *model.VerifyInput) (out model.VerifyOTPOutput, err error) {
+func (s *SUserAuth) VerifyOTP(ctx context.Context, in *user.VerifyOTPRequest) (out user.VerifyOTPResponse, err error) {
 	// logic
 	hashKey := crypto.GetHash(strings.ToLower(in.VerifyKey))
 
@@ -366,26 +368,26 @@ func (s *SUserLogin) VerifyOTP(ctx context.Context, in *model.VerifyInput) (out 
 	}
 
 	// Giữ lại các trường cũ để tương thích ngược
-	out.Token = infoOTP.VerifyKeyHash
 	out.VerifyToken = infoOTP.VerifyKeyHash
 
 	// Thêm thông tin theo cấu trúc mới
 	// Thông tin người dùng
-	out.User.ID = "0" // Chưa có ID người dùng vì chưa tạo tài khoản
-	out.User.Email = in.VerifyKey
-	out.User.Name = in.VerifyKey // Tạm thời dùng email làm tên
+	out.User.UserID = 0 // Chưa có ID người dùng vì chưa tạo tài khoản
+	out.User.UserAccount = in.VerifyKey
+	out.User.UserEmail = in.VerifyKey
 
 	// Thông tin token (chưa có token thực sự vì chưa đăng nhập)
 	out.Tokens.AccessToken = infoOTP.VerifyKeyHash // Tạm thời dùng verify token
 	out.Tokens.RefreshToken = ""
 
-	out.Message = "success"
+	out.ExpiresIn = consts.TIME_OTP_REGISTER
+	out.Message = "OTP verified successfully"
 
 	return out, err
 }
 
 // Changed receiver to match exported struct name
-func (s *SUserLogin) UpdatePasswordRegister(ctx context.Context, token string, password string) (codeResult int, userId int64, err error) {
+func (s *SUserAuth) UpdatePasswordRegister(ctx context.Context, token string, password string) (codeResult int, userId int64, err error) {
 	// Log token for debugging
 	log.Printf("UpdatePasswordRegister called with token: %s", token)
 
@@ -454,7 +456,7 @@ func (s *SUserLogin) UpdatePasswordRegister(ctx context.Context, token string, p
 	return response.ErrCodeSuccess, userId, nil // Return success code, userId, and nil error
 }
 // RefreshToken refreshes an access token using a refresh token
-func (s *SUserLogin) RefreshToken(ctx context.Context, refreshToken string) (codeResult int, out model.RefreshTokenOutput, err error) {
+func (s *SUserAuth) RefreshToken(ctx context.Context, refreshToken string) (codeResult int, out user.RefreshTokenResponse, err error) {
 	// 1. Verify the refresh token
 	claims, err := auth.VerifyTokenSubject(refreshToken)
 	if err != nil {
@@ -495,9 +497,10 @@ func (s *SUserLogin) RefreshToken(ctx context.Context, refreshToken string) (cod
 
 	// 6. Gán giá trị vào output theo cấu trúc mới
 	// Thông tin người dùng
-	out.User.ID = fmt.Sprintf("%v", userInfo["user_id"])
-	out.User.Email = fmt.Sprintf("%v", userInfo["user_account"])
-	out.User.Name = fmt.Sprintf("%v", userInfo["user_account"]) // Tạm thời dùng email làm tên
+	userIdFloat, _ := userInfo["user_id"].(float64)
+	out.User.UserID = int64(userIdFloat)
+	out.User.UserAccount = fmt.Sprintf("%v", userInfo["user_account"])
+	out.User.UserEmail = fmt.Sprintf("%v", userInfo["user_account"]) // Tạm thời dùng account làm email
 
 	// Thông tin token
 	out.Tokens.AccessToken = tokenPair.AccessToken
@@ -511,7 +514,7 @@ func (s *SUserLogin) RefreshToken(ctx context.Context, refreshToken string) (cod
 }
 
 // Logout đăng xuất người dùng
-func (s *SUserLogin) Logout(ctx context.Context, token string) (codeResult int, out model.LogoutOutput, err error) {
+func (s *SUserAuth) Logout(ctx context.Context, token string) (codeResult int, out user.LogoutResponse, err error) {
 	// 1. Verify the token
 	claims, err := auth.VerifyTokenSubject(token)
 	if err != nil {
@@ -554,25 +557,17 @@ func (s *SUserLogin) Logout(ctx context.Context, token string) (codeResult int, 
 }
 
 // ListUsers lấy danh sách user có phân trang và tìm kiếm theo tên
-func (s *SUserLogin) ListUsers(ctx context.Context, in *model.ListUsersInput) (codeResult int, out model.ListUsersOutput, err error) {
-	// 1. Validate input parameters
-	if in.Page <= 0 {
-		in.Page = 1
-	}
-	if in.PageSize <= 0 || in.PageSize > 100 {
-		in.PageSize = 10 // Default page size
-	}
-
-	// 2. Calculate offset
-	offset := (in.Page - 1) * in.PageSize
+func (s *SUserAuth) ListUsers(ctx context.Context, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[database.UserProfile], err error) {
+	// Validate input
+	input.Validate()
 
 	var users []database.UserProfile
 	var total int64
 
-	// 3. Check if search is provided
-	if in.Search != "" {
+	// Optimize: Use single conditional query instead of separate if/else blocks
+	if input.Search != "" {
 		// Search users by account or nickname
-		searchPattern := "%" + in.Search + "%"
+		searchPattern := "%" + input.Search + "%"
 
 		// Get total count with search
 		total, err = s.r.CountUsersWithSearch(ctx, database.CountUsersWithSearchParams{
@@ -580,57 +575,39 @@ func (s *SUserLogin) ListUsers(ctx context.Context, in *model.ListUsersInput) (c
 			UserNickname: sql.NullString{String: searchPattern, Valid: true},
 		})
 		if err != nil {
-			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to count users with search: %v", err)
+			return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to count users with search: %w", err)
 		}
 
 		// Get users with search
 		users, err = s.r.ListUsersWithSearch(ctx, database.ListUsersWithSearchParams{
 			UserAccount:  searchPattern,
 			UserNickname: sql.NullString{String: searchPattern, Valid: true},
-			Limit:        int32(in.PageSize),
-			Offset:       int32(offset),
+			Limit:        int32(input.PageSize),
+			Offset:       int32(input.CalculateOffset()),
 		})
 		if err != nil {
-			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to list users with search: %v", err)
+			return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to list users with search: %w", err)
 		}
 	} else {
 		// Get all users without search
 		total, err = s.r.CountUsers(ctx)
 		if err != nil {
-			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to count users: %v", err)
+			return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to count users: %w", err)
 		}
 
 		// Get users without search
 		users, err = s.r.ListUsers(ctx, database.ListUsersParams{
-			Limit:  int32(in.PageSize),
-			Offset: int32(offset),
+			Limit:  int32(input.PageSize),
+			Offset: int32(input.CalculateOffset()),
 		})
 		if err != nil {
-			return response.ErrCodeAuthFailed, out, fmt.Errorf("failed to list users: %v", err)
+			return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to list users: %w", err)
 		}
 	}
 
-	// 4. No need to convert - use database models directly with JSON tags
-	userItems := users
-
-	// 5. Calculate pagination info
-	totalPages := int((total + int64(in.PageSize) - 1) / int64(in.PageSize))
-	hasNext := in.Page < totalPages
-	hasPrev := in.Page > 1
-
-	// 6. Build output
-	out = model.ListUsersOutput{
-		Users:      userItems,
-		Total:      total,
-		Page:       in.Page,
-		PageSize:   in.PageSize,
-		TotalPages: totalPages,
-		HasNext:    hasNext,
-		HasPrev:    hasPrev,
-		Message:    "Users retrieved successfully",
-	}
-
-	return response.ErrCodeSuccess, out, nil
+	// Create paginated response using SQLC best practice (slice of values)
+	paginatedResponse := model.NewPaginatedResponse(users, *input, total, "Users retrieved successfully")
+	return response.ErrCodeSuccess, &paginatedResponse, nil
 }
 
 // auto-reload trigger

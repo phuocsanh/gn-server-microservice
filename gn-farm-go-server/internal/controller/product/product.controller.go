@@ -1,9 +1,8 @@
 package product
 
 import (
-	"database/sql"
 	"fmt"
-	"gn-farm-go-server/internal/database"
+	"gn-farm-go-server/internal/model"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/vo/product"
 	"gn-farm-go-server/pkg/response"
@@ -41,45 +40,14 @@ func (c *productController) CreateProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Convert from request to database params
-	params := database.CreateProductParams{
-		ProductName:            req.ProductName,
-		ProductPrice:           req.ProductPrice,
-		ProductThumb:           req.ProductThumb,
-		ProductPictures:        req.ProductPictures,
-		ProductVideos:          req.ProductVideos,
-		ProductType:            req.ProductType,
-		SubProductType:         req.SubProductType,
-		ProductDiscountedPrice: req.ProductDiscountedPrice,
-		ProductAttributes:      req.ProductAttributes,
-		IsDraft:                sql.NullBool{Bool: req.IsDraft, Valid: true},
-		IsPublished:            sql.NullBool{Bool: req.IsPublished, Valid: true},
-	}
-
-	// Handle optional fields
-	if req.ProductStatus != nil {
-		params.ProductStatus = sql.NullInt32{Int32: *req.ProductStatus, Valid: true}
-	}
-
-	if req.ProductDescription != nil {
-		params.ProductDescription = sql.NullString{String: *req.ProductDescription, Valid: true}
-	}
-
-	if req.ProductQuantity != nil {
-		params.ProductQuantity = sql.NullInt32{Int32: *req.ProductQuantity, Valid: true}
-	}
-
-	if req.Discount != nil {
-		params.Discount = sql.NullString{String: *req.Discount, Valid: true}
-	}
-
-	product, err := service.Product.CreateProduct(ctx, &params)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.CreateProduct(ctx, &req)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, product)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // GetProduct retrieves a product by ID
@@ -95,51 +63,96 @@ func (c *productController) CreateProduct(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [get]
 func (c *productController) GetProduct(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required,min=1"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	product, err := service.Product.GetProduct(ctx, id)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.GetProduct(ctx, params.ID)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, product)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // ListProducts retrieves a list of products
 // @Summary      List products
-// @Description  Get a paginated list of products
+// @Description  Get a paginated list of products with optional filtering by type and subtype. If limit is not provided, returns all products.
 // @Tags         product management
 // @Accept       json
 // @Produce      json
-// @Param        limit query int true "Number of items to return" minimum(1) maximum(100) example:10
+// @Param        limit query int false "Number of items to return (0 or omit for all)" minimum(0) maximum(1000) example:10
 // @Param        offset query int false "Number of items to skip" minimum(0) default(0) example:0
+// @Param        type query int false "Product type ID to filter by" example:1
+// @Param        subType query int false "Product subtype ID to filter by" example:1
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product [get]
 func (c *productController) ListProducts(ctx *gin.Context) {
 	var params struct {
-		Query  string `form:"query" binding:"required,min=1"`
-		Limit  int32  `form:"limit" binding:"required,min=1,max=100"`
-		Offset int32  `form:"offset" binding:"min=0"`
+		Limit   *int32 `form:"limit" binding:"omitempty,min=0,max=1000"`
+		Offset  int32  `form:"offset" binding:"min=0"`
+		Type    *int32 `form:"type"`
+		SubType *int32 `form:"subType"`
 	}
 	if err := ctx.ShouldBindQuery(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	products, err := service.Product.SearchProducts(ctx, params.Query, params.Limit, params.Offset)
-	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
-		return
+	// Set default limit if not provided (0 means get all)
+	var limit interface{} = int32(0)
+	if params.Limit != nil {
+		limit = *params.Limit
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, products)
+	// Create pagination request
+	limitInt32 := limit.(int32)
+	var page int
+	var pageSize int
+
+	if limitInt32 == 0 {
+		// No limit specified, use default pagination
+		page = 1
+		pageSize = 10 // Default page size
+	} else {
+		page = int(params.Offset/limitInt32) + 1
+		pageSize = int(limitInt32)
+	}
+
+	paginationRequest := &model.PaginationRequest{
+		Page:     page,
+		PageSize: pageSize,
+		Search:   "", // No search in this endpoint
+	}
+
+	// Check if filtering is needed
+	if params.Type != nil || params.SubType != nil {
+		// Call service with filter following user pattern
+		codeRs, dataRs, err := service.Product.ListProductsWithFilter(ctx, params.Type, params.SubType, paginationRequest)
+		if err != nil {
+			response.ErrorResponse(ctx, codeRs, err.Error())
+			return
+		}
+
+		response.SuccessResponse(ctx, codeRs, dataRs)
+	} else {
+		// Call service without filter following user pattern
+		codeRs, dataRs, err := service.Product.ListProducts(ctx, paginationRequest)
+		if err != nil {
+			response.ErrorResponse(ctx, codeRs, err.Error())
+			return
+		}
+
+		response.SuccessResponse(ctx, codeRs, dataRs)
+	}
 }
 
 // UpdateProduct updates an existing product
@@ -162,52 +175,22 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	// Convert from request to database params
-	params := database.UpdateProductParams{
-		ID:                     id,
-		ProductName:            req.ProductName,
-		ProductPrice:           req.ProductPrice,
-		ProductThumb:           req.ProductThumb,
-		ProductPictures:        req.ProductPictures,
-		ProductVideos:          req.ProductVideos,
-		ProductType:            req.ProductType,
-		SubProductType:         req.SubProductType,
-		ProductDiscountedPrice: req.ProductDiscountedPrice,
-		ProductAttributes:      req.ProductAttributes,
-		IsDraft:                sql.NullBool{Bool: req.IsDraft, Valid: true},
-		IsPublished:            sql.NullBool{Bool: req.IsPublished, Valid: true},
-	}
-
-	// Handle optional fields
-	if req.ProductStatus != nil {
-		params.ProductStatus = sql.NullInt32{Int32: *req.ProductStatus, Valid: true}
-	}
-
-	if req.ProductDescription != nil {
-		params.ProductDescription = sql.NullString{String: *req.ProductDescription, Valid: true}
-	}
-
-	if req.ProductQuantity != nil {
-		params.ProductQuantity = sql.NullInt32{Int32: *req.ProductQuantity, Valid: true}
-	}
-
-	if req.Discount != nil {
-		params.Discount = sql.NullString{String: *req.Discount, Valid: true}
-	}
-
-	product, err := service.Product.UpdateProduct(ctx, &params)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.UpdateProduct(ctx, params.ID, &req)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, product)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // DeleteProduct deletes a product
@@ -223,28 +206,20 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [delete]
 func (c *productController) DeleteProduct(ctx *gin.Context) {
-	var req product.BulkUpdateRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	var id int32
+	if err := ctx.ShouldBindUri(&id); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	var params []database.UpdateProductParams
-	for _, item := range req.Products {
-		params = append(params, database.UpdateProductParams{
-			ID:          int32(item.ID),
-			ProductName: item.ProductName,
-			ProductPrice: item.ProductPrice,
-		})
-	}
-
-	products, err := service.Product.BulkUpdateProducts(ctx, params)
+	// Call service following user pattern
+	codeRs, err := service.Product.DeleteProduct(ctx, id)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, products)
+	response.SuccessResponse(ctx, codeRs, gin.H{"message": "Product deleted successfully"})
 }
 
 // SearchProducts searches for products by query
@@ -271,13 +246,14 @@ func (c *productController) SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	products, err := service.Product.SearchProducts(ctx, params.Query, params.Limit, params.Offset)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.SearchProducts(ctx, params.Query, params.Limit, params.Offset)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, products)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // FilterProducts handles filtering products by various criteria
@@ -314,61 +290,26 @@ func (c *productController) FilterProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Convert parameters to database types
-	dbParams := database.FilterProductsParams{
-		Limit:  params.Limit,
-		Offset: params.Offset,
+	// Convert to VO request
+	filterReq := &product.FilterProductsRequest{
+		Category:  params.Category,
+		MinPrice:  params.MinPrice,
+		MaxPrice:  params.MaxPrice,
+		InStock:   params.InStock,
+		SortBy:    params.SortBy,
+		SortOrder: params.SortOrder,
+		Limit:     params.Limit,
+		Offset:    params.Offset,
 	}
 
-	if params.Category != nil {
-		dbParams.Category = sql.NullString{
-			String: *params.Category,
-			Valid:  true,
-		}
-	}
-
-	if params.MinPrice != nil {
-		dbParams.MinPrice = sql.NullString{
-			String: fmt.Sprintf("%.2f", *params.MinPrice),
-			Valid:  true,
-		}
-	}
-
-	if params.MaxPrice != nil {
-		dbParams.MaxPrice = sql.NullString{
-			String: fmt.Sprintf("%.2f", *params.MaxPrice),
-			Valid:  true,
-		}
-	}
-
-	if params.InStock != nil {
-		dbParams.InStock = sql.NullBool{
-			Bool:  *params.InStock,
-			Valid: true,
-		}
-	}
-
-	if params.SortBy != "" {
-		dbParams.SortBy = sql.NullString{
-			String: params.SortBy,
-			Valid:  true,
-		}
-	}
-
-	if params.SortOrder != "" {
-		dbParams.SortOrder = sql.NullString{
-			String: params.SortOrder,
-			Valid:  true,
-		}
-	}
-
-	products, err := service.Product.FilterProducts(ctx, dbParams)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.FilterProducts(ctx, filterReq)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, products)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // GetProductStats returns statistics about products
@@ -381,13 +322,14 @@ func (c *productController) FilterProducts(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/stats [get]
 func (c *productController) GetProductStats(ctx *gin.Context) {
-	stats, err := service.Product.GetProductStats(ctx)
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.GetProductStats(ctx)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, stats)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // BulkUpdateProducts handles updating multiple products at once
@@ -402,21 +344,30 @@ func (c *productController) GetProductStats(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/bulk-update [put]
 func (c *productController) BulkUpdateProducts(ctx *gin.Context) {
-	var params struct {
-		Products []database.UpdateProductParams `json:"products" binding:"required,min=1,max=100"`
-	}
-	if err := ctx.ShouldBindJSON(&params); err != nil {
+	var req product.BulkUpdateRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	results, err := service.Product.BulkUpdateProducts(ctx, params.Products)
+	// Convert to VO request
+	var updateRequests []product.UpdateProductRequest
+	for _, item := range req.Products {
+		updateRequests = append(updateRequests, product.UpdateProductRequest{
+			ProductName:  item.ProductName,
+			ProductPrice: item.ProductPrice,
+			// Add other fields as needed
+		})
+	}
+
+	// Call service following user pattern
+	codeRs, dataRs, err := service.Product.BulkUpdateProducts(ctx, updateRequests)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, results)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // Các controller cho Mushroom, Vegetable, và Bonsai đã được loại bỏ

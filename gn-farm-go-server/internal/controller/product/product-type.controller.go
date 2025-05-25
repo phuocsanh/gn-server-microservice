@@ -34,13 +34,13 @@ func (c *productTypeController) CreateProductType(ctx *gin.Context) {
 		return
 	}
 
-	productType, err := service.ProductType.CreateProductType(ctx, req.Name, req.Description)
+	codeRs, dataRs, err := service.ProductType.CreateProductType(ctx, &req)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productType)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // GetProductType retrieves a product type by ID
@@ -56,19 +56,21 @@ func (c *productTypeController) CreateProductType(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/type/{id} [get]
 func (c *productTypeController) GetProductType(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	productType, err := service.ProductType.GetProductType(ctx, id)
+	codeRs, dataRs, err := service.ProductType.GetProductType(ctx, params.ID)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productType)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // ListProductTypes retrieves a list of product types
@@ -81,13 +83,13 @@ func (c *productTypeController) GetProductType(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/type [get]
 func (c *productTypeController) ListProductTypes(ctx *gin.Context) {
-	productTypes, err := service.ProductType.ListProductTypes(ctx)
+	codeRs, dataRs, err := service.ProductType.ListProductTypes(ctx)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productTypes)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // UpdateProductType updates an existing product type
@@ -110,19 +112,21 @@ func (c *productTypeController) UpdateProductType(ctx *gin.Context) {
 		return
 	}
 
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	productType, err := service.ProductType.UpdateProductType(ctx, id, req.Name, req.Description)
+	codeRs, dataRs, err := service.ProductType.UpdateProductType(ctx, params.ID, &req)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productType)
+	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
 // DeleteProductType deletes a product type
@@ -138,18 +142,21 @@ func (c *productTypeController) UpdateProductType(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/type/{id} [delete]
 func (c *productTypeController) DeleteProductType(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	if err := service.ProductType.DeleteProductType(ctx, id); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+	codeRs, err := service.ProductType.DeleteProductType(ctx, params.ID)
+	if err != nil {
+		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	response.SuccessResponse(ctx, codeRs, gin.H{"message": "Product type deleted successfully"})
 }
 
 type productSubtypeController struct{}
@@ -194,13 +201,15 @@ func (c *productSubtypeController) CreateProductSubtype(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/subtype/{id} [get]
 func (c *productSubtypeController) GetProductSubtype(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	productSubtype, err := service.ProductSubtype.GetProductSubtype(ctx, id)
+	productSubtype, err := service.ProductSubtype.GetProductSubtype(ctx, params.ID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
@@ -240,13 +249,15 @@ func (c *productSubtypeController) ListProductSubtypes(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/type/{typeId}/subtypes [get]
 func (c *productSubtypeController) ListProductSubtypesByType(ctx *gin.Context) {
-	var typeId int32
-	if err := ctx.ShouldBindUri(&typeId); err != nil {
+	var params struct {
+		TypeID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	productSubtypes, err := service.ProductSubtype.ListProductSubtypesByType(ctx, typeId)
+	productSubtypes, err := service.ProductSubtype.ListProductSubtypesByType(ctx, params.TypeID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
@@ -275,13 +286,15 @@ func (c *productSubtypeController) UpdateProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	productSubtype, err := service.ProductSubtype.UpdateProductSubtype(ctx, id, req.Name, req.Description)
+	productSubtype, err := service.ProductSubtype.UpdateProductSubtype(ctx, params.ID, req.Name, req.Description)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
@@ -303,13 +316,15 @@ func (c *productSubtypeController) UpdateProductSubtype(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/subtype/{id} [delete]
 func (c *productSubtypeController) DeleteProductSubtype(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	if err := service.ProductSubtype.DeleteProductSubtype(ctx, id); err != nil {
+	if err := service.ProductSubtype.DeleteProductSubtype(ctx, params.ID); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
@@ -383,13 +398,15 @@ type productSubtypeRelationController struct{}
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{productId}/subtypes [get]
 func (c *productSubtypeRelationController) GetProductSubtypeRelations(ctx *gin.Context) {
-	var productId int32
-	if err := ctx.ShouldBindUri(&productId); err != nil {
+	var params struct {
+		ProductID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	relations, err := service.ProductSubtypeRelation.GetProductSubtypeRelations(ctx, productId)
+	relations, err := service.ProductSubtypeRelation.GetProductSubtypeRelations(ctx, params.ProductID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
@@ -470,13 +487,15 @@ func (c *productSubtypeRelationController) RemoveProductSubtypeRelation(ctx *gin
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{productId}/subtypes [delete]
 func (c *productSubtypeRelationController) RemoveAllProductSubtypeRelations(ctx *gin.Context) {
-	var productId int32
-	if err := ctx.ShouldBindUri(&productId); err != nil {
+	var params struct {
+		ProductID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	if err := service.ProductSubtypeRelation.RemoveAllProductSubtypeRelations(ctx, productId); err != nil {
+	if err := service.ProductSubtypeRelation.RemoveAllProductSubtypeRelations(ctx, params.ProductID); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}

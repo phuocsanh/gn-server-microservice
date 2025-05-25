@@ -7,16 +7,18 @@ SELECT * FROM product_types ORDER BY id;
 -- name: CreateProductType :one
 INSERT INTO product_types (
     name,
-    description
+    description,
+    image_url
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 ) RETURNING *;
 
 -- name: UpdateProductType :one
 UPDATE product_types
-SET 
+SET
     name = $2,
     description = $3,
+    image_url = $4,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;

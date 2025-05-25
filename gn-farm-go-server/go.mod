@@ -1,28 +1,30 @@
 module gn-farm-go-server
 
-go 1.22.0
+go 1.23.0
 
-toolchain go1.22.6
+toolchain go1.23.9
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/guregu/null v4.0.0+incompatible
 	github.com/lib/pq v1.10.9
 	github.com/sendgrid/sendgrid-go v3.16.0+incompatible
 	github.com/sqlc-dev/pqtype v0.3.0
+	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/gin-swagger v1.6.0
 	gorm.io/driver/postgres v1.5.11
 )
 
 require (
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/google/subcommands v1.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20231201235250-de7065d80cb9 // indirect
 	github.com/jackc/pgx/v5 v5.5.5 // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sendgrid/rest v2.6.9+incompatible // indirect
-	golang.org/x/mod v0.21.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
 

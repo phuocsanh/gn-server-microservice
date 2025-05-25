@@ -5,9 +5,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+
 	"gn-farm-go-server/internal/database"
-	"gn-farm-go-server/internal/model/product"
+	"gn-farm-go-server/internal/model"
+	productModel "gn-farm-go-server/internal/model/product"
 	"gn-farm-go-server/internal/service"
+	productVO "gn-farm-go-server/internal/vo/product"
+	"gn-farm-go-server/pkg/response"
+
+	"github.com/guregu/null"
 )
 
 // productService implements service.ProductService and service.ProductFactory
@@ -249,8 +255,15 @@ func createBonsaiProduct(ctx context.Context, db *database.Queries, params inter
 	return &product, nil
 }
 
-// NewProductService creates a new product service with factory pattern
-func NewProductService(db *database.Queries) service.ProductService {
+// Removed NewProductService - using NewProductServiceImpl instead
+
+// productServiceWrapper wraps productService to implement IProductService interface
+type productServiceWrapper struct {
+	ps *productService
+}
+
+// NewProductServiceImpl creates a new product service implementation for IProductService interface
+func NewProductServiceImpl(db *database.Queries) service.IProductService {
 	ps := &productService{
 		db:              db,
 		productRegistry: make(map[int32]productCreator),
@@ -261,7 +274,398 @@ func NewProductService(db *database.Queries) service.ProductService {
 	ps.registerProductType(service.ProductTypeVegetable, createVegetableProduct)
 	ps.registerProductType(service.ProductTypeBonsai, createBonsaiProduct)
 
-	return ps
+	return &productServiceWrapper{ps: ps}
+}
+
+// Implement IProductService interface methods
+func (w *productServiceWrapper) CreateProduct(ctx context.Context, in *productVO.CreateProductRequest) (codeResult int, out productVO.ProductResponse, err error) {
+	// Convert CreateProductRequest to database.CreateProductParams
+	params := database.CreateProductParams{
+		ProductName:            in.ProductName,
+		ProductPrice:           in.ProductPrice,
+		ProductThumb:           in.ProductThumb,
+		ProductPictures:        in.ProductPictures,
+		ProductVideos:          in.ProductVideos,
+		ProductType:            in.ProductType,
+		SubProductType:         in.SubProductType,
+		ProductDiscountedPrice: in.ProductDiscountedPrice,
+		ProductAttributes:      in.ProductAttributes,
+		IsDraft:                sql.NullBool{Bool: in.IsDraft, Valid: true},
+		IsPublished:            sql.NullBool{Bool: in.IsPublished, Valid: true},
+	}
+
+	// Handle optional fields
+	if in.ProductStatus != nil {
+		params.ProductStatus = sql.NullInt32{Int32: *in.ProductStatus, Valid: true}
+	}
+	if in.ProductDescription != nil {
+		params.ProductDescription = sql.NullString{String: *in.ProductDescription, Valid: true}
+	}
+	if in.ProductQuantity != nil {
+		params.ProductQuantity = sql.NullInt32{Int32: *in.ProductQuantity, Valid: true}
+	}
+	if in.Discount != nil {
+		params.Discount = sql.NullString{String: *in.Discount, Valid: true}
+	}
+
+	// Create product using the underlying service
+	product, err := w.ps.CreateProduct(ctx, &params)
+	if err != nil {
+		return response.ErrCodeInternalServerError, out, err
+	}
+
+	// Convert database.Product to ProductResponse using converter functions
+	var productVariations json.RawMessage
+	if product.ProductVariations.Valid {
+		productVariations = product.ProductVariations.RawMessage
+	}
+
+	out = productVO.ProductResponse{
+		ID:                     product.ID,
+		ProductName:            product.ProductName,
+		ProductPrice:           product.ProductPrice,
+		ProductStatus:          convertSqlNullInt32ToNull(product.ProductStatus),
+		ProductThumb:           product.ProductThumb,
+		ProductPictures:        product.ProductPictures,
+		ProductVideos:          product.ProductVideos,
+		ProductRatingsAverage:  convertSqlNullStringToNull(product.ProductRatingsAverage),
+		ProductVariations:      productVariations,
+		ProductDescription:     convertSqlNullStringToNull(product.ProductDescription),
+		ProductSlug:            convertSqlNullStringToNull(product.ProductSlug),
+		ProductQuantity:        convertSqlNullInt32ToNull(product.ProductQuantity),
+		ProductType:            product.ProductType,
+		SubProductType:         product.SubProductType,
+		Discount:               convertSqlNullStringToNull(product.Discount),
+		ProductDiscountedPrice: product.ProductDiscountedPrice,
+		ProductSelled:          convertSqlNullInt32ToNull(product.ProductSelled),
+		ProductAttributes:      product.ProductAttributes,
+		IsDraft:                convertSqlNullBoolToNull(product.IsDraft),
+		IsPublished:            convertSqlNullBoolToNull(product.IsPublished),
+		CreatedAt:              product.CreatedAt,
+		UpdatedAt:              product.UpdatedAt,
+	}
+
+	return response.ErrCodeSuccess, out, nil
+}
+
+func (w *productServiceWrapper) GetProduct(ctx context.Context, id int32) (codeResult int, out productVO.ProductResponse, err error) {
+	// Get product from database
+	product, err := w.ps.GetProduct(ctx, id)
+	if err != nil {
+		return response.ErrCodeInternalServerError, out, fmt.Errorf("failed to get product: %w", err)
+	}
+
+	// Convert to response format - dereference pointer to get value
+	productResponse := w.convertDatabaseProductToResponse(*product)
+
+	return response.ErrCodeSuccess, productResponse, nil
+}
+
+func (w *productServiceWrapper) ListProducts(ctx context.Context, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[productVO.ProductResponse], err error) {
+	// Validate pagination input
+	input.Validate()
+
+	// Calculate limit and offset
+	limit := int32(input.PageSize)
+	offset := int32(input.CalculateOffset())
+
+	// Get products from database
+	products, err := w.ps.ListProducts(ctx, limit, offset)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to list products: %w", err)
+	}
+
+	// Convert to response format
+	productResponses := make([]productVO.ProductResponse, len(products))
+	for i, product := range products {
+		productResponses[i] = w.convertDatabaseProductToResponse(product)
+	}
+
+	// Get total count for pagination
+	totalCount, err := w.ps.CountProducts(ctx)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to count products: %w", err)
+	}
+
+	// Create paginated response
+	paginatedResponse := model.NewPaginatedResponse(productResponses, *input, totalCount, "Products retrieved successfully")
+
+	return response.ErrCodeSuccess, &paginatedResponse, nil
+}
+
+func (w *productServiceWrapper) ListProductsWithFilter(ctx context.Context, productType *int32, subProductType *int32, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[productVO.ProductResponse], err error) {
+	// Validate pagination input
+	input.Validate()
+
+	// Calculate limit and offset
+	limit := int32(input.PageSize)
+	offset := int32(input.CalculateOffset())
+
+	// Get products from database with filter
+	products, err := w.ps.ListProductsWithFilter(ctx, productType, subProductType, limit, offset)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to list products with filter: %w", err)
+	}
+
+	// Convert to response format
+	productResponses := make([]productVO.ProductResponse, len(products))
+	for i, product := range products {
+		productResponses[i] = w.convertDatabaseProductToResponse(product)
+	}
+
+	// Get total count for pagination (we'll use the same count for now)
+	totalCount, err := w.ps.CountProducts(ctx)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to count products: %w", err)
+	}
+
+	// Create paginated response
+	paginatedResponse := model.NewPaginatedResponse(productResponses, *input, totalCount, "Filtered products retrieved successfully")
+
+	return response.ErrCodeSuccess, &paginatedResponse, nil
+}
+
+func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in *productVO.UpdateProductRequest) (codeResult int, out productVO.ProductResponse, err error) {
+	// Convert UpdateProductRequest to database.UpdateProductParams
+	params := database.UpdateProductParams{
+		ID:                     id,
+		ProductName:            in.ProductName,
+		ProductPrice:           in.ProductPrice,
+		ProductThumb:           in.ProductThumb,
+		ProductPictures:        in.ProductPictures,
+		ProductVideos:          in.ProductVideos,
+		ProductType:            in.ProductType,
+		SubProductType:         in.SubProductType,
+		ProductDiscountedPrice: in.ProductDiscountedPrice,
+		ProductAttributes:      in.ProductAttributes,
+		IsDraft:                sql.NullBool{Bool: in.IsDraft, Valid: true},
+		IsPublished:            sql.NullBool{Bool: in.IsPublished, Valid: true},
+	}
+
+	// Handle optional fields
+	if in.ProductStatus != nil {
+		params.ProductStatus = sql.NullInt32{Int32: *in.ProductStatus, Valid: true}
+	}
+	if in.ProductDescription != nil {
+		params.ProductDescription = sql.NullString{String: *in.ProductDescription, Valid: true}
+	}
+	if in.ProductQuantity != nil {
+		params.ProductQuantity = sql.NullInt32{Int32: *in.ProductQuantity, Valid: true}
+	}
+	if in.Discount != nil {
+		params.Discount = sql.NullString{String: *in.Discount, Valid: true}
+	}
+
+	// Update product using the underlying service
+	product, err := w.ps.UpdateProduct(ctx, &params)
+	if err != nil {
+		return response.ErrCodeInternalServerError, out, err
+	}
+
+	// Convert database.Product to ProductResponse using converter functions
+	var productVariations json.RawMessage
+	if product.ProductVariations.Valid {
+		productVariations = product.ProductVariations.RawMessage
+	}
+
+	out = productVO.ProductResponse{
+		ID:                     product.ID,
+		ProductName:            product.ProductName,
+		ProductPrice:           product.ProductPrice,
+		ProductStatus:          convertSqlNullInt32ToNull(product.ProductStatus),
+		ProductThumb:           product.ProductThumb,
+		ProductPictures:        product.ProductPictures,
+		ProductVideos:          product.ProductVideos,
+		ProductRatingsAverage:  convertSqlNullStringToNull(product.ProductRatingsAverage),
+		ProductVariations:      productVariations,
+		ProductDescription:     convertSqlNullStringToNull(product.ProductDescription),
+		ProductSlug:            convertSqlNullStringToNull(product.ProductSlug),
+		ProductQuantity:        convertSqlNullInt32ToNull(product.ProductQuantity),
+		ProductType:            product.ProductType,
+		SubProductType:         product.SubProductType,
+		Discount:               convertSqlNullStringToNull(product.Discount),
+		ProductDiscountedPrice: product.ProductDiscountedPrice,
+		ProductSelled:          convertSqlNullInt32ToNull(product.ProductSelled),
+		ProductAttributes:      product.ProductAttributes,
+		IsDraft:                convertSqlNullBoolToNull(product.IsDraft),
+		IsPublished:            convertSqlNullBoolToNull(product.IsPublished),
+		CreatedAt:              product.CreatedAt,
+		UpdatedAt:              product.UpdatedAt,
+	}
+
+	return response.ErrCodeSuccess, out, nil
+}
+
+func (w *productServiceWrapper) DeleteProduct(ctx context.Context, id int32) (codeResult int, err error) {
+	return response.ErrCodeInternalServerError, fmt.Errorf("DeleteProduct not implemented yet")
+}
+
+func (w *productServiceWrapper) SearchProducts(ctx context.Context, query string, limit, offset int32) (codeResult int, out []productVO.ProductResponse, err error) {
+	// Get products from database
+	products, err := w.ps.SearchProducts(ctx, query, limit, offset)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to search products: %w", err)
+	}
+
+	// Convert to response format
+	productResponses := make([]productVO.ProductResponse, len(products))
+	for i, product := range products {
+		productResponses[i] = w.convertDatabaseProductToResponse(product)
+	}
+
+	return response.ErrCodeSuccess, productResponses, nil
+}
+
+func (w *productServiceWrapper) FilterProducts(ctx context.Context, in *productVO.FilterProductsRequest) (codeResult int, out []productVO.ProductResponse, err error) {
+	// Convert request to database params
+	params := database.FilterProductsParams{
+		Offset: in.Offset,
+		Limit:  in.Limit,
+	}
+
+	// Set category filter
+	if in.Category != nil {
+		// Assuming category maps to product_type
+		// You might need to convert category string to product_type ID
+		// For now, let's assume it's already an integer string
+		params.Category = sql.NullInt32{Valid: false} // TODO: implement category mapping
+	}
+
+	// Set price filters - fix the price comparison issue
+	if in.MinPrice != nil {
+		params.MinPrice = sql.NullString{String: fmt.Sprintf("%.2f", *in.MinPrice), Valid: true}
+	}
+
+	if in.MaxPrice != nil {
+		params.MaxPrice = sql.NullString{String: fmt.Sprintf("%.2f", *in.MaxPrice), Valid: true}
+	}
+
+	// Set stock filter
+	if in.InStock != nil {
+		params.InStock = sql.NullBool{Bool: *in.InStock, Valid: true}
+	}
+
+	// Set sorting
+	if in.SortBy != "" {
+		params.SortBy = sql.NullString{String: in.SortBy, Valid: true}
+	}
+
+	if in.SortOrder != "" {
+		params.SortOrder = sql.NullString{String: in.SortOrder, Valid: true}
+	}
+
+	// Get products from database
+	products, err := w.ps.FilterProducts(ctx, params)
+	if err != nil {
+		return response.ErrCodeInternalServerError, nil, fmt.Errorf("failed to filter products: %w", err)
+	}
+
+	// Convert to response format
+	productResponses := make([]productVO.ProductResponse, len(products))
+	for i, product := range products {
+		productResponses[i] = w.convertDatabaseProductToResponse(product)
+	}
+
+	return response.ErrCodeSuccess, productResponses, nil
+}
+
+func (w *productServiceWrapper) GetProductStats(ctx context.Context) (codeResult int, out productVO.ProductStats, err error) {
+	// Delegate to the underlying productService
+	stats, err := w.ps.GetProductStats(ctx)
+	if err != nil {
+		return response.ErrCodeInternalServerError, out, fmt.Errorf("failed to get product stats: %v", err)
+	}
+
+	// Convert productModel.ProductStats to productVO.ProductStats
+	var minPrice, maxPrice string
+	if stats.MinPrice != nil {
+		if val, ok := stats.MinPrice.(float64); ok {
+			minPrice = fmt.Sprintf("%.0f", val)
+		} else if val, ok := stats.MinPrice.(string); ok {
+			minPrice = val
+		}
+	}
+	if stats.MaxPrice != nil {
+		if val, ok := stats.MaxPrice.(float64); ok {
+			maxPrice = fmt.Sprintf("%.0f", val)
+		} else if val, ok := stats.MaxPrice.(string); ok {
+			maxPrice = val
+		}
+	}
+
+	out = productVO.ProductStats{
+		TotalProducts:      stats.TotalProducts,
+		InStockProducts:    stats.InStockProducts,
+		OutOfStockProducts: stats.OutOfStockProducts,
+		TotalProductsSold:  stats.TotalProductsSold,
+		AverageRating:      stats.AverageRating,
+		MinPrice:           minPrice,
+		MaxPrice:           maxPrice,
+		AvgPrice:           fmt.Sprintf("%.0f", stats.AvgPrice),
+		TotalCategories:    stats.TotalCategories,
+	}
+
+	return response.ErrCodeSuccess, out, nil
+}
+
+func (w *productServiceWrapper) BulkUpdateProducts(ctx context.Context, in []productVO.UpdateProductRequest) (codeResult int, out []productVO.ProductResponse, err error) {
+	return response.ErrCodeInternalServerError, nil, fmt.Errorf("BulkUpdateProducts not implemented yet")
+}
+
+// convertDatabaseProductToResponse converts database.Product to productVO.ProductResponse
+// Updated to accept database.Product (value) instead of *database.Product (pointer) for better performance
+func (w *productServiceWrapper) convertDatabaseProductToResponse(dbProduct database.Product) productVO.ProductResponse {
+	var productVariations json.RawMessage
+	if dbProduct.ProductVariations.Valid {
+		productVariations = dbProduct.ProductVariations.RawMessage
+	}
+
+	return productVO.ProductResponse{
+		ID:                     dbProduct.ID,
+		ProductName:            dbProduct.ProductName,
+		ProductPrice:           dbProduct.ProductPrice,
+		ProductStatus:          convertSqlNullInt32ToNull(dbProduct.ProductStatus),
+		ProductThumb:           dbProduct.ProductThumb,
+		ProductPictures:        dbProduct.ProductPictures,
+		ProductVideos:          dbProduct.ProductVideos,
+		ProductRatingsAverage:  convertSqlNullStringToNull(dbProduct.ProductRatingsAverage),
+		ProductVariations:      productVariations,
+		ProductDescription:     convertSqlNullStringToNull(dbProduct.ProductDescription),
+		ProductSlug:            convertSqlNullStringToNull(dbProduct.ProductSlug),
+		ProductQuantity:        convertSqlNullInt32ToNull(dbProduct.ProductQuantity),
+		ProductType:            dbProduct.ProductType,
+		SubProductType:         dbProduct.SubProductType,
+		Discount:               convertSqlNullStringToNull(dbProduct.Discount),
+		ProductDiscountedPrice: dbProduct.ProductDiscountedPrice,
+		ProductSelled:          convertSqlNullInt32ToNull(dbProduct.ProductSelled),
+		ProductAttributes:      dbProduct.ProductAttributes,
+		IsDraft:                convertSqlNullBoolToNull(dbProduct.IsDraft),
+		IsPublished:            convertSqlNullBoolToNull(dbProduct.IsPublished),
+		CreatedAt:              dbProduct.CreatedAt,
+		UpdatedAt:              dbProduct.UpdatedAt,
+	}
+}
+
+// Helper functions to convert sql.NullXXX to null.XXX
+func convertSqlNullStringToNull(sqlNull sql.NullString) null.String {
+	if sqlNull.Valid {
+		return null.StringFrom(sqlNull.String)
+	}
+	return null.String{}
+}
+
+func convertSqlNullInt32ToNull(sqlNull sql.NullInt32) null.Int {
+	if sqlNull.Valid {
+		return null.IntFrom(int64(sqlNull.Int32))
+	}
+	return null.Int{}
+}
+
+func convertSqlNullBoolToNull(sqlNull sql.NullBool) null.Bool {
+	if sqlNull.Valid {
+		return null.BoolFrom(sqlNull.Bool)
+	}
+	return null.Bool{}
 }
 
 // registerProductType registers a product creator function for a specific product type
@@ -296,19 +700,47 @@ func (s *productService) GetProduct(ctx context.Context, id int32) (*database.Pr
 	return &product, nil
 }
 
-func (s *productService) ListProducts(ctx context.Context, limit, offset int32) ([]*database.Product, error) {
+func (s *productService) ListProducts(ctx context.Context, limit, offset int32) ([]database.Product, error) {
+	// SQLC best practice: Return slice of values directly, no manual pointer conversion
 	products, err := s.db.ListProducts(ctx, database.ListProductsParams{
-		Limit:  limit,
-		Offset: offset,
+		Column1: limit,
+		Offset:  offset,
 	})
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*database.Product, len(products))
-	for i := range products {
-		result[i] = &products[i]
+	// Return slice of values directly - optimal for performance
+	return products, nil
+}
+
+func (s *productService) CountProducts(ctx context.Context) (int64, error) {
+	return s.db.CountProducts(ctx)
+}
+
+func (s *productService) ListProductsWithFilter(ctx context.Context, productType *int32, subProductType *int32, limit, offset int32) ([]database.Product, error) {
+	var productTypeParam sql.NullInt32
+	var subProductTypeParam sql.NullInt32
+
+	if productType != nil {
+		productTypeParam = sql.NullInt32{Int32: *productType, Valid: true}
 	}
-	return result, nil
+
+	if subProductType != nil {
+		subProductTypeParam = sql.NullInt32{Int32: *subProductType, Valid: true}
+	}
+
+	products, err := s.db.ListProductsWithFilter(ctx, database.ListProductsWithFilterParams{
+		ProductType:    productTypeParam,
+		SubProductType: subProductTypeParam,
+		Offset:         offset,
+		Limit:          limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Return slice of values directly - optimal for performance
+	return products, nil
 }
 
 func (s *productService) UpdateProduct(ctx context.Context, params *database.UpdateProductParams) (*database.Product, error) {
@@ -445,56 +877,84 @@ func (s *productService) DeleteProduct(ctx context.Context, id int32) error {
 	return s.db.DeleteProduct(ctx, id)
 }
 
-func (s *productService) SearchProducts(ctx context.Context, query string, limit, offset int32) ([]*database.Product, error) {
+func (s *productService) SearchProducts(ctx context.Context, query string, limit, offset int32) ([]database.Product, error) {
 	products, err := s.db.SearchProducts(ctx, database.SearchProductsParams{
-		ProductName: query,
-		Limit:       limit,
-		Offset:      offset,
+		Column1: sql.NullString{String: query, Valid: true},
+		Limit:   limit,
+		Offset:  offset,
 	})
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*database.Product, len(products))
-	for i := range products {
-		result[i] = &products[i]
-	}
-	return result, nil
+	// Return slice of values directly - optimal for performance
+	return products, nil
 }
 
-func (s *productService) FilterProducts(ctx context.Context, params database.FilterProductsParams) ([]*database.Product, error) {
+func (s *productService) FilterProducts(ctx context.Context, params database.FilterProductsParams) ([]database.Product, error) {
 	products, err := s.db.FilterProducts(ctx, params)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]*database.Product, len(products))
-	for i := range products {
-		product := products[i]
-		result[i] = &product
-	}
-	return result, nil
+	// Return slice of values directly - optimal for performance
+	return products, nil
 }
 
-func (s *productService) GetProductStats(ctx context.Context) (*product.ProductStats, error) {
+func (s *productService) GetProductStats(ctx context.Context) (*productModel.ProductStats, error) {
 	statsRow, err := s.db.GetProductStats(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	stats := &product.ProductStats{
+	// Handle type assertions for interface{} fields
+	var totalProductsSold int64
+	var averageRating float64
+	var avgPrice float64
+	var minPrice, maxPrice interface{}
+
+	if statsRow.TotalProductsSold != nil {
+		if val, ok := statsRow.TotalProductsSold.(int64); ok {
+			totalProductsSold = val
+		}
+	}
+
+	if statsRow.AverageRating != nil {
+		if val, ok := statsRow.AverageRating.(float64); ok {
+			averageRating = val
+		}
+	}
+
+	if statsRow.MinPrice != nil {
+		minPrice = statsRow.MinPrice
+	}
+
+	if statsRow.MaxPrice != nil {
+		maxPrice = statsRow.MaxPrice
+	}
+
+	if statsRow.AvgPrice != nil {
+		if val, ok := statsRow.AvgPrice.(float64); ok {
+			avgPrice = val
+		}
+	}
+
+	stats := &productModel.ProductStats{
 		TotalProducts:      statsRow.TotalProducts,
 		InStockProducts:    statsRow.InStockProducts,
 		OutOfStockProducts: statsRow.OutOfStockProducts,
-		TotalProductsSold:  statsRow.TotalProductsSold,
-		AverageRating:      statsRow.AverageRating,
-		MinPrice:           statsRow.MinPrice,
-		MaxPrice:           statsRow.MaxPrice,
-		AvgPrice:           statsRow.AvgPrice,
+		TotalProductsSold:  totalProductsSold,
+		AverageRating:      averageRating,
+		MinPrice:           minPrice,
+		MaxPrice:           maxPrice,
+		AvgPrice:           avgPrice,
 		TotalCategories:    statsRow.TotalCategories,
 	}
 	return stats, nil
 }
 
-func (s *productService) BulkUpdateProducts(ctx context.Context, params []database.UpdateProductParams) ([]*database.Product, error) {
+// Removed duplicate BulkUpdateProducts method
+
+// BulkUpdateProductsOld - keep old method for backward compatibility
+func (s *productService) BulkUpdateProductsOld(ctx context.Context, params []database.UpdateProductParams) ([]*database.Product, error) {
 	products := make([]*database.Product, 0, len(params))
 	for _, param := range params {
 		product, err := s.db.UpdateProduct(ctx, param)
@@ -519,7 +979,7 @@ func (s *mushroomService) CreateMushroom(ctx context.Context, name sql.NullStrin
 	attributes, _ := json.Marshal(service.MushroomAttributes{
 		Brand: name.String,
 	})
-	
+
 	params := database.CreateProductParams{
 		ProductName:            name.String,
 		ProductPrice:           "0",
@@ -531,7 +991,7 @@ func (s *mushroomService) CreateMushroom(ctx context.Context, name sql.NullStrin
 		ProductDiscountedPrice: "0",
 		ProductAttributes:      attributes,
 	}
-	
+
 	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
@@ -545,12 +1005,12 @@ func (s *mushroomService) GetMushroom(ctx context.Context, id int32) (*database.
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Mushroom không
 	if product.ProductType != service.ProductTypeMushroom {
 		return nil, fmt.Errorf("product is not a mushroom type")
 	}
-	
+
 	return &product, nil
 }
 
@@ -560,34 +1020,34 @@ func (s *mushroomService) UpdateMushroom(ctx context.Context, params interface{}
 	if !ok {
 		return nil, fmt.Errorf("invalid params type for mushroom")
 	}
-	
+
 	// Lấy ID từ params (giả định rằng params có trường ID)
 	id := int32(0) // Cần lấy ID từ params
-	
+
 	// Lấy sản phẩm hiện tại
 	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Mushroom không
 	if product.ProductType != service.ProductTypeMushroom {
 		return nil, fmt.Errorf("product is not a mushroom type")
 	}
-	
+
 	// Cập nhật thuộc tính
 	attributes, _ := json.Marshal(mushroomParams)
-	
+
 	updateParams := database.UpdateProductParams{
 		ID:               id,
 		ProductAttributes: attributes,
 	}
-	
+
 	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &updatedProduct, nil
 }
 
@@ -597,12 +1057,12 @@ func (s *mushroomService) DeleteMushroom(ctx context.Context, id int32) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Kiểm tra xem có phải loại Mushroom không
 	if product.ProductType != service.ProductTypeMushroom {
 		return fmt.Errorf("product is not a mushroom type")
 	}
-	
+
 	// Xóa sản phẩm
 	return s.db.DeleteProduct(ctx, id)
 }
@@ -620,7 +1080,7 @@ func (s *vegetableService) CreateVegetable(ctx context.Context, name sql.NullStr
 	attributes, _ := json.Marshal(service.VegetableAttributes{
 		Manufacturer: name.String,
 	})
-	
+
 	params := database.CreateProductParams{
 		ProductName:            name.String,
 		ProductPrice:           "0",
@@ -632,7 +1092,7 @@ func (s *vegetableService) CreateVegetable(ctx context.Context, name sql.NullStr
 		ProductDiscountedPrice: "0",
 		ProductAttributes:      attributes,
 	}
-	
+
 	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
@@ -646,12 +1106,12 @@ func (s *vegetableService) GetVegetable(ctx context.Context, id int32) (*databas
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Vegetable không
 	if product.ProductType != service.ProductTypeVegetable {
 		return nil, fmt.Errorf("product is not a vegetable type")
 	}
-	
+
 	return &product, nil
 }
 
@@ -661,34 +1121,34 @@ func (s *vegetableService) UpdateVegetable(ctx context.Context, params interface
 	if !ok {
 		return nil, fmt.Errorf("invalid params type for vegetable")
 	}
-	
+
 	// Lấy ID từ params (giả định rằng params có trường ID)
 	id := int32(0) // Cần lấy ID từ params
-	
+
 	// Lấy sản phẩm hiện tại
 	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Vegetable không
 	if product.ProductType != service.ProductTypeVegetable {
 		return nil, fmt.Errorf("product is not a vegetable type")
 	}
-	
+
 	// Cập nhật thuộc tính
 	attributes, _ := json.Marshal(vegetableParams)
-	
+
 	updateParams := database.UpdateProductParams{
 		ID:               id,
 		ProductAttributes: attributes,
 	}
-	
+
 	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &updatedProduct, nil
 }
 
@@ -698,12 +1158,12 @@ func (s *vegetableService) DeleteVegetable(ctx context.Context, id int32) error 
 	if err != nil {
 		return err
 	}
-	
+
 	// Kiểm tra xem có phải loại Vegetable không
 	if product.ProductType != service.ProductTypeVegetable {
 		return fmt.Errorf("product is not a vegetable type")
 	}
-	
+
 	// Xóa sản phẩm
 	return s.db.DeleteProduct(ctx, id)
 }
@@ -721,7 +1181,7 @@ func (s *bonsaiService) CreateBonsai(ctx context.Context, name sql.NullString) (
 	attributes, _ := json.Marshal(service.BonsaiAttributes{
 		Brand: name.String,
 	})
-	
+
 	params := database.CreateProductParams{
 		ProductName:            name.String,
 		ProductPrice:           "0",
@@ -733,7 +1193,7 @@ func (s *bonsaiService) CreateBonsai(ctx context.Context, name sql.NullString) (
 		ProductDiscountedPrice: "0",
 		ProductAttributes:      attributes,
 	}
-	
+
 	product, err := s.db.CreateProduct(ctx, params)
 	if err != nil {
 		return nil, err
@@ -747,12 +1207,12 @@ func (s *bonsaiService) GetBonsai(ctx context.Context, id int32) (*database.Prod
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Bonsai không
 	if product.ProductType != service.ProductTypeBonsai {
 		return nil, fmt.Errorf("product is not a bonsai type")
 	}
-	
+
 	return &product, nil
 }
 
@@ -762,34 +1222,34 @@ func (s *bonsaiService) UpdateBonsai(ctx context.Context, params interface{}) (*
 	if !ok {
 		return nil, fmt.Errorf("invalid params type for bonsai")
 	}
-	
+
 	// Lấy ID từ params (giả định rằng params có trường ID)
 	id := int32(0) // Cần lấy ID từ params
-	
+
 	// Lấy sản phẩm hiện tại
 	product, err := s.db.GetProduct(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Kiểm tra xem có phải loại Bonsai không
 	if product.ProductType != service.ProductTypeBonsai {
 		return nil, fmt.Errorf("product is not a bonsai type")
 	}
-	
+
 	// Cập nhật thuộc tính
 	attributes, _ := json.Marshal(bonsaiParams)
-	
+
 	updateParams := database.UpdateProductParams{
 		ID:               id,
 		ProductAttributes: attributes,
 	}
-	
+
 	updatedProduct, err := s.db.UpdateProduct(ctx, updateParams)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &updatedProduct, nil
 }
 
@@ -799,12 +1259,12 @@ func (s *bonsaiService) DeleteBonsai(ctx context.Context, id int32) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Kiểm tra xem có phải loại Bonsai không
 	if product.ProductType != service.ProductTypeBonsai {
 		return fmt.Errorf("product is not a bonsai type")
 	}
-	
+
 	// Xóa sản phẩm
 	return s.db.DeleteProduct(ctx, id)
 }

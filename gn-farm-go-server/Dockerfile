@@ -1,7 +1,7 @@
 FROM golang:alpine
 
 # Cài đặt các công cụ cần thiết
-RUN apk add --no-cache git
+RUN apk add --no-cache git curl
 
 # Cài đặt swag và thêm vào PATH
 RUN go install github.com/swaggo/swag/cmd/swag@latest

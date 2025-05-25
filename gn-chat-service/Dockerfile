@@ -3,7 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install ffmpeg and other dependencies
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg curl
 
 # Copy package.json and package-lock.json
 COPY package*.json ./

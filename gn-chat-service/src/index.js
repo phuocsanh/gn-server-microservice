@@ -13,6 +13,7 @@ dotenv.config()
 const chatRoutes = require("./routes/chat.routes")
 const userRoutes = require("./routes/user.routes")
 const fileRoutes = require("./routes/file.routes")
+const healthRoutes = require("./routes/health.routes")
 
 // Create uploads directory for file storage
 const path = require("path")
@@ -46,7 +47,10 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Routes
+// Health check routes (no /api prefix for standard health endpoints)
+app.use("/", healthRoutes)
+
+// API Routes
 app.use("/api/chat", chatRoutes)
 app.use("/api/users", userRoutes)
 app.use("/api/files", fileRoutes)
