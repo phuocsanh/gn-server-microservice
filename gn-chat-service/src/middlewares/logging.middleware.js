@@ -299,93 +299,108 @@ const errorLogging = (err, req, res, next) => {
 /**
  * Database operation logging
  */
-const dbLogging = {
-  logQuery: (operation, collection, query, duration) => {
-    logger.debug('Database query', {
+const dbLogger = {
+  log: (message, level = 'info') => {
+    logger[level]('Database operation', {
       type: 'database',
-      operation,
-      collection,
-      query: sanitizeObject(query, ['password'], 200),
-      duration: `${duration}ms`,
+      message,
       timestamp: new Date().toISOString()
     });
   },
-
-  logError: (operation, collection, error) => {
-    logger.error('Database error', {
-      type: 'database',
-      operation,
-      collection,
-      error: {
-        name: error.name,
-        message: error.message
-      },
-      timestamp: new Date().toISOString()
-    });
-  }
+  info: (message) => dbLogger.log(message, 'info'),
+  warn: (message) => dbLogger.log(message, 'warn'),
+  error: (message) => dbLogger.log(message, 'error')
 };
 
 /**
- * Utility functions
+ * Generate unique request ID
  */
 const generateRequestId = () => {
-  return Math.random().toString(36).substring(2, 15) + 
-         Math.random().toString(36).substring(2, 15);
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5).toUpperCase();
 };
 
-const sanitizeHeaders = (headers, sensitiveFields) => {
+/**
+ * Sanitize headers to remove sensitive information
+ */
+const sanitizeHeaders = (headers, sensitiveFields = []) => {
   const sanitized = { ...headers };
+  
   sensitiveFields.forEach(field => {
-    if (sanitized[field]) {
-      sanitized[field] = '[REDACTED]';
-    }
+    Object.keys(sanitized).forEach(key => {
+      if (key.toLowerCase().includes(field.toLowerCase()) && sanitized[key]) {
+        sanitized[key] = '***REDACTED***';
+      }
+    });
   });
+  
   return sanitized;
 };
 
-const sanitizeObject = (obj, sensitiveFields, maxSize = 1024) => {
-  if (!obj || typeof obj !== 'object') {
-    return obj;
+/**
+ * Sanitize object to remove sensitive information and truncate if too large
+ */
+const sanitizeObject = (obj, sensitiveFields = [], maxSize = 1024) => {
+  if (!obj) return obj;
+  
+  // Convert to string if not an object
+  if (typeof obj !== 'object') {
+    return String(obj).substring(0, maxSize);
   }
-
+  
+  // Clone the object to avoid modifying the original
   const sanitized = JSON.parse(JSON.stringify(obj));
   
-  // Remove sensitive fields
-  const removeSensitiveFields = (object) => {
-    if (Array.isArray(object)) {
-      return object.map(removeSensitiveFields);
-    } else if (object && typeof object === 'object') {
-      const cleaned = {};
-      for (const [key, value] of Object.entries(object)) {
-        if (sensitiveFields.some(field => key.toLowerCase().includes(field.toLowerCase()))) {
-          cleaned[key] = '[REDACTED]';
-        } else {
-          cleaned[key] = removeSensitiveFields(value);
-        }
+  // Recursive function to sanitize nested objects
+  const sanitizeRecursive = (object, fields) => {
+    if (!object || typeof object !== 'object') return;
+    
+    Object.keys(object).forEach(key => {
+      // Check if key contains any sensitive field
+      const isSensitive = fields.some(field => 
+        key.toLowerCase().includes(field.toLowerCase())
+      );
+      
+      if (isSensitive && object[key]) {
+        object[key] = '***REDACTED***';
+      } else if (typeof object[key] === 'object') {
+        sanitizeRecursive(object[key], fields);
       }
-      return cleaned;
-    }
-    return object;
+    });
   };
-
-  const cleaned = removeSensitiveFields(sanitized);
   
-  // Truncate if too large
-  const stringified = JSON.stringify(cleaned);
-  if (stringified.length > maxSize) {
-    return stringified.substring(0, maxSize) + '... [TRUNCATED]';
+  sanitizeRecursive(sanitized, sensitiveFields);
+  
+  // Truncate if JSON representation is too large
+  const jsonString = JSON.stringify(sanitized);
+  if (jsonString.length > maxSize) {
+    return {
+      _truncated: true,
+      _originalSize: jsonString.length,
+      _message: 'Object was truncated due to size limits',
+      ...JSON.parse(jsonString.substring(0, maxSize) + '"}')
+    };
   }
   
-  return cleaned;
+  return sanitized;
 };
 
 /**
- * Request ID middleware
+ * Logging middleware stack
  */
-const requestId = (req, res, next) => {
-  req.requestId = req.get('X-Request-ID') || generateRequestId();
-  res.set('X-Request-ID', req.requestId);
-  next();
+const loggingMiddlewareStack = [
+  requestLogging,
+  securityLogging,
+  performanceLogging(1000), // Log requests taking more than 1 second
+  errorLogging
+];
+
+/**
+ * Apply all logging middlewares
+ */
+const applyLoggingMiddlewares = (app) => {
+  loggingMiddlewareStack.forEach(middleware => {
+    app.use(middleware);
+  });
 };
 
 module.exports = {
@@ -395,9 +410,10 @@ module.exports = {
   securityLogging,
   performanceLogging,
   errorLogging,
-  dbLogging,
-  requestId,
-  generateRequestId,
+  dbLogger,
+  loggingMiddlewareStack,
+  applyLoggingMiddlewares,
   sanitizeHeaders,
-  sanitizeObject
+  sanitizeObject,
+  generateRequestId
 };

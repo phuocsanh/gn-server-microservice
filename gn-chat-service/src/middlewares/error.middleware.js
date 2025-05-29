@@ -256,124 +256,31 @@ const dbConnectionErrorHandler = (err, req, res, next) => {
 };
 
 /**
- * Syntax error handler (for malformed JSON)
+ * Error handler middleware stack
  */
-const syntaxErrorHandler = (err, req, res, next) => {
-  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        type: 'SYNTAX_ERROR',
-        message: 'Invalid JSON format',
-        statusCode: 400
-      }
-    });
-  }
-
-  next(err);
-};
+const errorHandlerStack = [
+  corsErrorHandler,
+  jwtErrorHandler,
+  validationErrorHandler,
+  mongoErrorHandler,
+  multerErrorHandler,
+  timeoutErrorHandler,
+  dbConnectionErrorHandler,
+  rateLimitErrorHandler,
+  errorHandler
+];
 
 /**
- * Security error handler
+ * Apply all error handlers
  */
-const securityErrorHandler = (err, req, res, next) => {
-  // Handle potential security threats
-  if (err.message && (
-    err.message.includes('script') ||
-    err.message.includes('injection') ||
-    err.message.includes('xss')
-  )) {
-    return res.status(403).json({
-      success: false,
-      error: {
-        type: 'SECURITY_ERROR',
-        message: 'Security violation detected',
-        statusCode: 403
-      }
-    });
-  }
-
-  next(err);
-};
-
-/**
- * Business logic error handler
- */
-const businessLogicErrorHandler = (err, req, res, next) => {
-  if (err.type === 'BUSINESS_LOGIC_ERROR') {
-    return res.status(400).json({
-      success: false,
-      error: {
-        type: 'BUSINESS_LOGIC_ERROR',
-        message: err.message,
-        statusCode: 400,
-        code: err.code
-      }
-    });
-  }
-
-  next(err);
-};
-
-/**
- * External service error handler
- */
-const externalServiceErrorHandler = (err, req, res, next) => {
-  if (err.type === 'EXTERNAL_SERVICE_ERROR') {
-    return res.status(502).json({
-      success: false,
-      error: {
-        type: 'EXTERNAL_SERVICE_ERROR',
-        message: 'External service unavailable',
-        statusCode: 502,
-        service: err.service
-      }
-    });
-  }
-
-  next(err);
-};
-
-/**
- * Error metrics collector
- */
-const errorMetrics = {
-  total: 0,
-  byType: {},
-  byStatusCode: {},
-  byEndpoint: {}
-};
-
-const collectErrorMetrics = (err, req, res, next) => {
-  errorMetrics.total++;
+const applyErrorHandlers = (app) => {
+  // Apply 404 handler for undefined routes
+  app.use('*', notFoundHandler);
   
-  const errorType = err.type || 'UNKNOWN_ERROR';
-  errorMetrics.byType[errorType] = (errorMetrics.byType[errorType] || 0) + 1;
-  
-  const statusCode = getStatusCode(err);
-  errorMetrics.byStatusCode[statusCode] = (errorMetrics.byStatusCode[statusCode] || 0) + 1;
-  
-  const endpoint = `${req.method} ${req.route?.path || req.path}`;
-  errorMetrics.byEndpoint[endpoint] = (errorMetrics.byEndpoint[endpoint] || 0) + 1;
-  
-  next(err);
-};
-
-/**
- * Get error metrics
- */
-const getErrorMetrics = () => {
-  return errorMetrics;
-};
-
-/**
- * Reset error metrics
- */
-const resetErrorMetrics = () => {
-  errorMetrics.total = 0;
-  errorMetrics.byType = {};
-  errorMetrics.byStatusCode = {};
-  errorMetrics.byEndpoint = {};
+  // Apply error handler stack
+  errorHandlerStack.forEach(handler => {
+    app.use(handler);
+  });
 };
 
 module.exports = {
@@ -388,11 +295,6 @@ module.exports = {
   corsErrorHandler,
   timeoutErrorHandler,
   dbConnectionErrorHandler,
-  syntaxErrorHandler,
-  securityErrorHandler,
-  businessLogicErrorHandler,
-  externalServiceErrorHandler,
-  collectErrorMetrics,
-  getErrorMetrics,
-  resetErrorMetrics
+  errorHandlerStack,
+  applyErrorHandlers
 };
