@@ -40,7 +40,8 @@ func (c *productTypeController) CreateProductType(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // GetProductType retrieves a product type by ID
@@ -70,7 +71,8 @@ func (c *productTypeController) GetProductType(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // ListProductTypes retrieves a list of product types
@@ -89,7 +91,8 @@ func (c *productTypeController) ListProductTypes(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItems(ctx, codeRs, dataRs)
 }
 
 // UpdateProductType updates an existing product type
@@ -99,7 +102,7 @@ func (c *productTypeController) ListProductTypes(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Product Type ID" example:1
-// @Param        payload body ProductTypeRequest true "Updated product type details"
+// @Param        payload body product.ProductTypeRequest true "Updated product type details"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      404  {object}  response.ErrorResponseData
@@ -126,7 +129,8 @@ func (c *productTypeController) UpdateProductType(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // DeleteProductType deletes a product type
@@ -156,7 +160,8 @@ func (c *productTypeController) DeleteProductType(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, gin.H{"message": "Product type deleted successfully"})
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, gin.H{"message": "Product type deleted successfully"})
 }
 
 type productSubtypeController struct{}
@@ -185,7 +190,8 @@ func (c *productSubtypeController) CreateProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productSubtype)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
 }
 
 // GetProductSubtype retrieves a product subtype by ID
@@ -211,11 +217,12 @@ func (c *productSubtypeController) GetProductSubtype(ctx *gin.Context) {
 
 	productSubtype, err := service.ProductSubtype.GetProductSubtype(ctx, params.ID)
 	if err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		response.ErrorResponse(ctx, response.ErrCodeNotFound, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productSubtype)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
 }
 
 // ListProductSubtypes retrieves a list of product subtypes
@@ -234,7 +241,8 @@ func (c *productSubtypeController) ListProductSubtypes(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productSubtypes)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, productSubtypes)
 }
 
 // ListProductSubtypesByType retrieves a list of product subtypes by product type ID
@@ -263,7 +271,8 @@ func (c *productSubtypeController) ListProductSubtypesByType(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productSubtypes)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, productSubtypes)
 }
 
 // UpdateProductSubtype updates an existing product subtype
@@ -273,7 +282,7 @@ func (c *productSubtypeController) ListProductSubtypesByType(ctx *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        id path int true "Product Subtype ID" example:1
-// @Param        payload body ProductSubtypeRequest true "Updated product subtype details"
+// @Param        payload body product.ProductSubtypeRequest true "Updated product subtype details"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      404  {object}  response.ErrorResponseData
@@ -300,7 +309,8 @@ func (c *productSubtypeController) UpdateProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, productSubtype)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
 }
 
 // DeleteProductSubtype deletes a product subtype
@@ -324,12 +334,14 @@ func (c *productSubtypeController) DeleteProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	if err := service.ProductSubtype.DeleteProductSubtype(ctx, params.ID); err != nil {
+	err := service.ProductSubtype.DeleteProductSubtype(ctx, params.ID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "Product subtype deleted successfully"})
 }
 
 // AddProductSubtypeMapping adds a mapping between a product type and a product subtype
@@ -350,12 +362,14 @@ func (c *productSubtypeController) AddProductSubtypeMapping(ctx *gin.Context) {
 		return
 	}
 
-	if err := service.ProductSubtype.AddProductSubtypeMapping(ctx, req.ProductTypeID, req.ProductSubtypeID); err != nil {
+	err := service.ProductSubtype.AddProductSubtypeMapping(ctx, req.ProductTypeID, req.ProductSubtypeID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "Product subtype mapping added successfully"})
 }
 
 // RemoveProductSubtypeMapping removes a mapping between a product type and a product subtype
@@ -376,12 +390,14 @@ func (c *productSubtypeController) RemoveProductSubtypeMapping(ctx *gin.Context)
 		return
 	}
 
-	if err := service.ProductSubtype.RemoveProductSubtypeMapping(ctx, req.ProductTypeID, req.ProductSubtypeID); err != nil {
+	err := service.ProductSubtype.RemoveProductSubtypeMapping(ctx, req.ProductTypeID, req.ProductSubtypeID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "Product subtype mapping removed successfully"})
 }
 
 type productSubtypeRelationController struct{}
@@ -399,20 +415,21 @@ type productSubtypeRelationController struct{}
 // @Router       /product/{productId}/subtypes [get]
 func (c *productSubtypeRelationController) GetProductSubtypeRelations(ctx *gin.Context) {
 	var params struct {
-		ProductID int32 `uri:"id" binding:"required"`
+		ProductID int32 `uri:"productId" binding:"required"`
 	}
 	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	relations, err := service.ProductSubtypeRelation.GetProductSubtypeRelations(ctx, params.ProductID)
+	subtypes, err := service.ProductSubtypeRelation.GetProductSubtypeRelations(ctx, params.ProductID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, relations)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, subtypes)
 }
 
 // AddProductSubtypeRelation adds a relation between a product and a product subtype
@@ -437,12 +454,14 @@ func (c *productSubtypeRelationController) AddProductSubtypeRelation(ctx *gin.Co
 		return
 	}
 
-	if err := service.ProductSubtypeRelation.AddProductSubtypeRelation(ctx, params.ProductID, params.SubtypeID); err != nil {
+	err := service.ProductSubtypeRelation.AddProductSubtypeRelation(ctx, params.ProductID, params.SubtypeID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "Product subtype relation added successfully"})
 }
 
 // RemoveProductSubtypeRelation removes a relation between a product and a product subtype
@@ -467,12 +486,14 @@ func (c *productSubtypeRelationController) RemoveProductSubtypeRelation(ctx *gin
 		return
 	}
 
-	if err := service.ProductSubtypeRelation.RemoveProductSubtypeRelation(ctx, params.ProductID, params.SubtypeID); err != nil {
+	err := service.ProductSubtypeRelation.RemoveProductSubtypeRelation(ctx, params.ProductID, params.SubtypeID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "Product subtype relation removed successfully"})
 }
 
 // RemoveAllProductSubtypeRelations removes all relations for a product
@@ -488,17 +509,19 @@ func (c *productSubtypeRelationController) RemoveProductSubtypeRelation(ctx *gin
 // @Router       /product/{productId}/subtypes [delete]
 func (c *productSubtypeRelationController) RemoveAllProductSubtypeRelations(ctx *gin.Context) {
 	var params struct {
-		ProductID int32 `uri:"id" binding:"required"`
+		ProductID int32 `uri:"productId" binding:"required"`
 	}
 	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	if err := service.ProductSubtypeRelation.RemoveAllProductSubtypeRelations(ctx, params.ProductID); err != nil {
+	err := service.ProductSubtypeRelation.RemoveAllProductSubtypeRelations(ctx, params.ProductID)
+	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, response.ErrCodeSuccess, nil)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, gin.H{"message": "All product subtype relations removed successfully"})
 }

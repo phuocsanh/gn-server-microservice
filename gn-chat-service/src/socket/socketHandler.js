@@ -1,15 +1,34 @@
 const jwt = require("jsonwebtoken")
-const { getRedisClient } = require("../config/redis")
+const { getRedisClient, isRedisConnected } = require("../config/redis")
 const Message = require("../models/message.model")
 const Conversation = require("../models/conversation.model")
 const { getUserInfo } = require("../services/user.service")
 const s3Service = require("../services/s3-storage.service")
 
-// Store active connections
+// Store active connections with last activity timestamp
 const activeUsers = new Map()
 
-// Socket.io handler
-const socketHandler = async (socket) => {
+// Cache for user info to reduce database queries
+const userInfoCache = new Map()
+const USER_CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
+
+// Cleanup interval for user cache (every 15 minutes)
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, value] of userInfoCache.entries()) {
+    if (now - value.timestamp > USER_CACHE_TTL) {
+      userInfoCache.delete(key)
+    }
+  }
+}, 15 * 60 * 1000)
+
+/**
+ * Socket.io connection handler
+ * Manages user authentication, real-time messaging, and presence tracking
+ * @param {Object} socket - Socket.io socket instance
+ * @param {Object} io - Socket.io server instance (optional)
+ */
+const socketHandler = async (socket, io) => {
   console.log("New client connected:", socket.id)
 
   // Authenticate user
@@ -19,13 +38,37 @@ const socketHandler = async (socket) => {
       throw new Error("Authentication token is missing")
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "xxx.yyy.zzz")
+    if (!process.env.JWT_SECRET) {
+      console.error("JWT_SECRET environment variable is not set")
+      throw new Error("Server configuration error")
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const userId = decoded.user_id
 
-    // Get user info from PostgreSQL
-    const user = await getUserInfo(userId)
-    if (!user) {
-      throw new Error("User not found")
+    if (!userId) {
+      throw new Error("Invalid authentication token: missing user_id")
+    }
+
+    // Check cache first before querying database
+    let user = null
+    const cacheKey = `user:${userId}`
+    const cachedUser = userInfoCache.get(cacheKey)
+
+    if (cachedUser && Date.now() - cachedUser.timestamp < USER_CACHE_TTL) {
+      user = cachedUser.data
+    } else {
+      // Get user info from PostgreSQL
+      user = await getUserInfo(userId)
+      if (!user) {
+        throw new Error("User not found")
+      }
+
+      // Update cache
+      userInfoCache.set(cacheKey, {
+        data: user,
+        timestamp: Date.now(),
+      })
     }
 
     // Store user connection
@@ -33,9 +76,23 @@ const socketHandler = async (socket) => {
     activeUsers.set(userId, socket.id)
 
     // Update user status in Redis
-    const redisClient = getRedisClient()
-    await redisClient.set(`user:${userId}:status`, "online")
-    await redisClient.set(`user:${userId}:socketId`, socket.id)
+    try {
+      if (isRedisConnected()) {
+        const redisClient = getRedisClient()
+        await Promise.all([
+          redisClient.set(`user:${userId}:status`, "online"),
+          redisClient.set(`user:${userId}:socketId`, socket.id),
+          redisClient.set(`user:${userId}:lastActive`, Date.now().toString()),
+        ])
+      } else {
+        console.warn(
+          `Redis not connected, skipping status update for user ${userId}`
+        )
+      }
+    } catch (redisError) {
+      console.error("Redis error when updating user status:", redisError)
+      // Continue execution - Redis errors shouldn't disconnect the user
+    }
 
     // Join user to their conversation rooms
     const conversations = await Conversation.find({
@@ -188,21 +245,57 @@ const socketHandler = async (socket) => {
     socket.on("disconnect", async () => {
       console.log(`User ${userId} disconnected`)
 
-      // Update user status in Redis
-      const redisClient = getRedisClient()
-      await redisClient.set(`user:${userId}:status`, "offline")
-      await redisClient.set(`user:${userId}:lastSeen`, new Date().toISOString())
-      await redisClient.del(`user:${userId}:socketId`)
+      try {
+        // Update user status in Redis if connected
+        if (isRedisConnected()) {
+          const redisClient = getRedisClient()
+          const now = new Date()
 
-      // Remove from active users
-      activeUsers.delete(userId)
+          await Promise.all([
+            redisClient.set(`user:${userId}:status`, "offline"),
+            redisClient.set(`user:${userId}:lastSeen`, now.toISOString()),
+            redisClient.del(`user:${userId}:socketId`),
+          ])
+        } else {
+          console.warn(
+            `Redis not connected, skipping status update for disconnected user ${userId}`
+          )
+        }
 
-      // Notify other users
-      socket.broadcast.emit("user:status", { userId, status: "offline" })
+        // Remove from active users
+        activeUsers.delete(userId)
+
+        // Notify other users
+        socket.broadcast.emit("user:status", {
+          userId,
+          status: "offline",
+          lastSeen: new Date().toISOString(),
+        })
+
+        // Clean up user cache after disconnect
+        userInfoCache.delete(`user:${userId}`)
+      } catch (error) {
+        console.error(`Error handling disconnect for user ${userId}:`, error)
+        // Even if there's an error, we should still clean up local state
+        activeUsers.delete(userId)
+        userInfoCache.delete(`user:${userId}`)
+      }
     })
   } catch (error) {
     console.error("Socket authentication error:", error)
-    socket.emit("error", { message: "Authentication failed" })
+
+    // Send appropriate error message based on error type
+    if (error.name === "JsonWebTokenError") {
+      socket.emit("error", { message: "Invalid authentication token" })
+    } else if (error.name === "TokenExpiredError") {
+      socket.emit("error", { message: "Authentication token expired" })
+    } else {
+      socket.emit("error", {
+        message: "Authentication failed: " + error.message,
+      })
+    }
+
+    // Disconnect socket
     socket.disconnect(true)
   }
 }

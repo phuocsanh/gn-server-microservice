@@ -77,3 +77,28 @@ func ErrorResponse(c *gin.Context, code int, message string) {
 		Data:    nil,
 	})
 }
+
+// SuccessResponseWithItem trả về response với một item
+func SuccessResponseWithItem(c *gin.Context, code int, item interface{}) {
+	data := gin.H{
+		"item": item,
+	}
+	SuccessResponse(c, code, data)
+}
+
+// SuccessResponseWithItems trả về response với danh sách items
+func SuccessResponseWithItems(c *gin.Context, code int, items interface{}) {
+	data := gin.H{
+		"items": items,
+	}
+	SuccessResponse(c, code, data)
+}
+
+// SuccessResponseWithPagination trả về response với danh sách items và thông tin phân trang
+func SuccessResponseWithPagination(c *gin.Context, code int, items interface{}, pagination interface{}) {
+	data := gin.H{
+		"items":      items,
+		"pagination": pagination,
+	}
+	SuccessResponse(c, code, data)
+}

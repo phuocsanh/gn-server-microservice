@@ -98,7 +98,15 @@ Authorization: Bearer {{access_token}}
 
 ### List products with pagination
 GET http://localhost:8002/v1/product?limit=10&offset=0
-Authorization: Bearer {{access_token}}
+
+### Get products by type (1: Nấm, 2: Rau củ, 3: Bonsai)
+GET http://localhost:8002/v1/product?type=1&limit=5
+
+### Get products by type and subtype
+GET http://localhost:8002/v1/product?type=3&subType=1&limit=5
+
+### Get all published products (no auth required)
+GET http://localhost:8002/v1/product?limit=5
 
 ### Search products
 GET http://localhost:8002/v1/product/search?query=organic&limit=10&offset=0

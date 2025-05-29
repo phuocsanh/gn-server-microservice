@@ -47,7 +47,8 @@ func (c *productController) CreateProduct(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // GetProduct retrieves a product by ID
@@ -78,7 +79,8 @@ func (c *productController) GetProduct(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // ListProducts retrieves a list of products
@@ -142,7 +144,8 @@ func (c *productController) ListProducts(ctx *gin.Context) {
 			return
 		}
 
-		response.SuccessResponse(ctx, codeRs, dataRs)
+		// Sử dụng helper function mới để đảm bảo tính nhất quán
+		response.SuccessResponseWithPagination(ctx, codeRs, dataRs.Data, dataRs.Pagination)
 	} else {
 		// Call service without filter following user pattern
 		codeRs, dataRs, err := service.Product.ListProducts(ctx, paginationRequest)
@@ -151,7 +154,8 @@ func (c *productController) ListProducts(ctx *gin.Context) {
 			return
 		}
 
-		response.SuccessResponse(ctx, codeRs, dataRs)
+		// Sử dụng helper function mới để đảm bảo tính nhất quán
+		response.SuccessResponseWithPagination(ctx, codeRs, dataRs.Data, dataRs.Pagination)
 	}
 }
 
@@ -190,7 +194,8 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // DeleteProduct deletes a product
@@ -206,20 +211,23 @@ func (c *productController) UpdateProduct(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [delete]
 func (c *productController) DeleteProduct(ctx *gin.Context) {
-	var id int32
-	if err := ctx.ShouldBindUri(&id); err != nil {
+	var params struct {
+		ID int32 `uri:"id" binding:"required"`
+	}
+	if err := ctx.ShouldBindUri(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
 	// Call service following user pattern
-	codeRs, err := service.Product.DeleteProduct(ctx, id)
+	codeRs, err := service.Product.DeleteProduct(ctx, params.ID)
 	if err != nil {
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, gin.H{"message": "Product deleted successfully"})
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, gin.H{"message": "Product deleted successfully"})
 }
 
 // SearchProducts searches for products by query
@@ -253,7 +261,9 @@ func (c *productController) SearchProducts(ctx *gin.Context) {
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	// SearchProducts trả về danh sách sản phẩm, sử dụng SuccessResponseWithItems
+	response.SuccessResponseWithItems(ctx, codeRs, dataRs)
 }
 
 // FilterProducts handles filtering products by various criteria
@@ -276,39 +286,51 @@ func (c *productController) SearchProducts(ctx *gin.Context) {
 // @Router       /product/filter [get]
 func (c *productController) FilterProducts(ctx *gin.Context) {
 	var params struct {
-		Category    *string  `form:"category"`
-		MinPrice    *float64 `form:"minPrice"`
-		MaxPrice    *float64 `form:"maxPrice"`
-		InStock     *bool    `form:"inStock"`
-		SortBy      string   `form:"sortBy" binding:"omitempty,oneof=price name created_at"`
-		SortOrder   string   `form:"sortOrder" binding:"omitempty,oneof=asc desc"`
-		Limit       int32    `form:"limit" binding:"required,min=1,max=100"`
-		Offset      int32    `form:"offset" binding:"min=0"`
+		Category  string  `form:"category"`
+		MinPrice  *float64 `form:"minPrice"`
+		MaxPrice  *float64 `form:"maxPrice"`
+		InStock   *bool   `form:"inStock"`
+		SortBy    string  `form:"sortBy" binding:"omitempty,oneof=price name created_at"`
+		SortOrder string  `form:"sortOrder" binding:"omitempty,oneof=asc desc"`
+		Limit     int32   `form:"limit" binding:"required,min=1,max=100"`
+		Offset    int32   `form:"offset" binding:"min=0"`
 	}
 	if err := ctx.ShouldBindQuery(&params); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	// Convert to VO request
-	filterReq := &product.FilterProductsRequest{
-		Category:  params.Category,
+	// Create filter request
+	filterRequest := &product.FilterProductsRequest{
 		MinPrice:  params.MinPrice,
 		MaxPrice:  params.MaxPrice,
 		InStock:   params.InStock,
-		SortBy:    params.SortBy,
-		SortOrder: params.SortOrder,
 		Limit:     params.Limit,
 		Offset:    params.Offset,
 	}
 
-	// Call service following user pattern
-	codeRs, dataRs, err := service.Product.FilterProducts(ctx, filterReq)
+	// Chuyển đổi các trường string thành con trỏ *string nếu có giá trị
+	if params.Category != "" {
+		category := params.Category
+		filterRequest.Category = &category
+	}
+	
+	if params.SortBy != "" {
+		filterRequest.SortBy = params.SortBy
+	}
+	
+	if params.SortOrder != "" {
+		filterRequest.SortOrder = params.SortOrder
+	}
+
+	// Call service
+	codeRs, dataRs, err := service.Product.FilterProducts(ctx, filterRequest)
 	if err != nil {
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
 	response.SuccessResponse(ctx, codeRs, dataRs)
 }
 
@@ -322,14 +344,15 @@ func (c *productController) FilterProducts(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/stats [get]
 func (c *productController) GetProductStats(ctx *gin.Context) {
-	// Call service following user pattern
+	// Call service
 	codeRs, dataRs, err := service.Product.GetProductStats(ctx)
 	if err != nil {
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // BulkUpdateProducts handles updating multiple products at once
@@ -350,24 +373,32 @@ func (c *productController) BulkUpdateProducts(ctx *gin.Context) {
 		return
 	}
 
-	// Convert to VO request
-	var updateRequests []product.UpdateProductRequest
-	for _, item := range req.Products {
-		updateRequests = append(updateRequests, product.UpdateProductRequest{
-			ProductName:  item.ProductName,
-			ProductPrice: item.ProductPrice,
-			// Add other fields as needed
-		})
+	// Validate request
+	if len(req.Products) == 0 {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, "No products to update")
+		return
 	}
 
-	// Call service following user pattern
+	// Chuyển đổi từ ProductUpdateItem sang UpdateProductRequest
+	updateRequests := make([]product.UpdateProductRequest, len(req.Products))
+	for i, item := range req.Products {
+		// Tạo UpdateProductRequest từ ProductUpdateItem
+		updateRequests[i] = product.UpdateProductRequest{
+			ProductName: item.ProductName,
+			// Các trường khác sẽ được thêm tùy theo yêu cầu cụ thể
+			// Ví dụ: ProductPrice, ProductStatus, v.v.
+		}
+	}
+
+	// Call service
 	codeRs, dataRs, err := service.Product.BulkUpdateProducts(ctx, updateRequests)
 	if err != nil {
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	response.SuccessResponse(ctx, codeRs, dataRs)
+	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
 // Các controller cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
