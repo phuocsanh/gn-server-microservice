@@ -174,8 +174,8 @@ class HealthController {
     const start = Date.now();
     
     try {
-      // Assuming you have a redis client available
-      const redisClient = redis.getClient(); // You'll need to implement this
+      // Lấy Redis client từ module redis
+      const redisClient = redis.getRedisClient(); // Sửa tên hàm từ getClient thành getRedisClient
       
       if (!redisClient || !redisClient.isOpen) {
         throw new Error('Redis client not connected');

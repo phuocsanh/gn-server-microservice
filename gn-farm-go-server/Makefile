@@ -10,16 +10,6 @@ APP_NAME = server
 dev:
 	go run ./cmd/$(APP_NAME)
 
-# Docker commands
-docker_up:
-	docker compose up -d
-
-docker_down:
-	docker compose down
-
-docker_build:
-	docker compose up -d --build
-
 # Database migration commands
 migrate_up:
 	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING=$(GOOSE_DBSTRING) goose -dir=$(GOOSE_MIGRATION_DIR) up
