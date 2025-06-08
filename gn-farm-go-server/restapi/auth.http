@@ -3,9 +3,9 @@ POST http://localhost:8002/v1/user/register
 Content-Type: application/json
 
 {
-  "verifyKey": "test@example.com",
-  "verifyType": 1,
-  "verifyPurpose": "TEST_USER"
+  "verify_key": "phuocsanhtps@gmail.com",
+  "verify_type": 1,
+  "verify_purpose": "TEST_USER"
 }
 
 ### Thiết lập biến mặc định
@@ -20,8 +20,8 @@ POST http://localhost:8002/v1/user/verify-otp
 Content-Type: application/json
 
 {
-  "verifyKey": "phuocsanhtps@gmail.com",
-  "verifyCode": "123456"
+  "verify_key": "phuocsanhtps@gmail.com",
+  "verify_code": "123456"
 }
 
 > {%
@@ -34,8 +34,8 @@ POST http://localhost:8002/v1/user/update-pass-register
 Content-Type: application/json
 
 {
-  "userToken": "{{verify_token}}",
-  "userPassword": "Password123!"
+  "user_token": "{{verify_token}}",
+  "user_password": "Password123!"
 }
 
 ### Login with the new account
@@ -44,8 +44,8 @@ POST http://localhost:8002/v1/user/login
 Content-Type: application/json
 
 {
-  "userAccount": "phuocsanhtps@gmail.com",
-  "userPassword": "12345678"
+  "user_account": "phuocsanhtps@gmail.com",
+  "user_password": "12345678"
 }
 
 > {%
@@ -58,7 +58,7 @@ POST http://localhost:8002/v1/user/refresh-token
 Content-Type: application/json
 
 {
-  "refreshToken": "{{refresh_token}}"
+  "refresh_token": "{{refresh_token}}"
 }
 
 > {%
@@ -78,9 +78,9 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "userId": 1,
-  "twoFactorAuthType": "EMAIL",
-  "twoFactorEmail": "test@example.com"
+  "user_id": 1,
+  "two_factor_auth_type": "EMAIL",
+  "two_factor_email": "test@example.com"
 }
 
 ### Verify two-factor authentication
@@ -89,8 +89,8 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "userId": 1,
-  "twoFactorCode": "123456"
+  "user_id": 1,
+  "two_factor_code": "123456"
 }
 
 ### ===== PRODUCT MANAGEMENT APIs =====
@@ -101,24 +101,24 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "productName": "Organic Vegetable Mix",
-  "productPrice": "150000",
-  "productStatus": 1,
-  "productThumb": "https://example.com/images/organic-mix.jpg",
-  "productPictures": [
+  "product_name": "Organic Vegetable Mix",
+  "product_price": "150000",
+  "product_status": 1,
+  "product_thumb": "https://example.com/images/organic-mix.jpg",
+  "product_pictures": [
     "https://example.com/images/organic-mix-1.jpg",
     "https://example.com/images/organic-mix-2.jpg"
   ],
-  "productVideos": [
+  "product_videos": [
     "https://example.com/videos/organic-mix-promo.mp4"
   ],
-  "productDescription": "Fresh organic vegetable mix from our farm. Contains a variety of seasonal vegetables.",
-  "productQuantity": 50,
-  "productType": 1,
-  "subProductType": [1, 2],
+  "product_description": "Fresh organic vegetable mix from our farm. Contains a variety of seasonal vegetables.",
+  "product_quantity": 50,
+  "product_type": 1,
+  "sub_product_type": [1, 2],
   "discount": "10",
-  "productDiscountedPrice": "135000",
-  "productAttributes": {
+  "product_discounted_price": "135000",
+  "product_attributes": {
     "origin": "Vietnam",
     "organic": true,
     "certification": "VietGAP"
@@ -135,7 +135,7 @@ Authorization: Bearer {{access_token}}
 {
   "brand": "GN Farm",
   "size": "Medium",
-  "material": "Organic"
+  "material": "Organic" 
 }
 
 ### Create a vegetable product
@@ -182,28 +182,28 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "productName": "Updated Organic Vegetable Mix",
-  "productPrice": "160000",
-  "productStatus": 1,
-  "productThumb": "https://example.com/images/updated-organic-mix.jpg",
-  "productPictures": [
+  "product_name": "Updated Organic Vegetable Mix",
+  "product_price": "160000",
+  "product_status": 1,
+  "product_thumb": "https://example.com/images/updated-organic-mix.jpg",
+  "product_pictures": [
     "https://example.com/images/updated-organic-mix-1.jpg",
     "https://example.com/images/updated-organic-mix-2.jpg"
   ],
-  "productDescription": "Updated description for our fresh organic vegetable mix.",
-  "productQuantity": 45,
-  "productType": 1,
-  "subProductType": [1, 2],
+  "product_description": "Updated description for our fresh organic vegetable mix.",
+  "product_quantity": 45,
+  "product_type": 1,
+  "sub_product_type": [1, 2],
   "discount": "15",
-  "productDiscountedPrice": "136000",
-  "productAttributes": {
+  "product_discounted_price": "136000",
+  "product_attributes": {
     "origin": "Vietnam",
     "organic": true,
     "certification": "VietGAP",
     "freshness": "Extra Fresh"
   },
-  "isDraft": false,
-  "isPublished": true
+  "is_draft": false,
+  "is_published": true
 }
 
 ### Delete a product

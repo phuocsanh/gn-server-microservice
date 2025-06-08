@@ -2,6 +2,7 @@ package routers
 
 import (
 	"gn-farm-go-server/internal/controller"
+	"gn-farm-go-server/internal/routers/manage"
 	"gn-farm-go-server/internal/routers/product"
 	"gn-farm-go-server/internal/routers/user"
 
@@ -28,6 +29,10 @@ func NewRouter() *gin.Engine {
 		// Initialize product routes
 		productRouter := product.ProductRouter{}
 		productRouter.InitProductRouter(v1)
+
+		// Initialize manage routes
+		productManageRouter := manage.ProductManageRouter{}
+		productManageRouter.InitProductManageRouter(v1)
 	}
 
 	return r

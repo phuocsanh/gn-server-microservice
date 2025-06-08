@@ -6,6 +6,7 @@ import (
 	"gn-farm-go-server/internal/middlewares"
 	"gn-farm-go-server/internal/routers"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +24,15 @@ func InitRouter() *gin.Engine {
 	r.Use(middlewares.ErrorHandler())
 	r.Use(middlewares.LoggingMiddleware())
 	r.Use(middlewares.RequestResponseLoggingMiddleware())
-	// r.Use() // cross
+	
+	// CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5174", "http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
 	// r.Use() // limiter global
 	manageRouter := routers.RouterGroupApp.Manage
 	userRouterGroup := routers.RouterGroupApp.User

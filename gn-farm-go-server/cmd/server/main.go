@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "gn-farm-go-server/cmd/swag/docs"
 	"gn-farm-go-server/internal/initialize"
 	"log"
 
