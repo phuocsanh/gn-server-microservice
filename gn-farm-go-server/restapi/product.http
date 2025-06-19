@@ -173,3 +173,93 @@ Authorization: Bearer {{access_token}}
     "product_discounted_price": "81000"
   }
 ]
+
+### ===== PRODUCT TYPE MANAGEMENT =====
+
+### Create Product Type
+POST http://localhost:8002/v1/admin/product/type
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Rau củ quả",
+  "description": "Các loại rau củ quả tươi sạch"
+}
+
+### Update Product Type
+PUT http://localhost:8002/v1/admin/product/type/1
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Rau củ quả hữu cơ",
+  "description": "Các loại rau củ quả hữu cơ sạch 100%"
+}
+
+### Delete Product Type
+DELETE http://localhost:8002/v1/admin/product/type/1
+Authorization: Bearer {{access_token}}
+
+### ===== PRODUCT SUBTYPE MANAGEMENT =====
+
+### Create Product Subtype
+POST http://localhost:8002/v1/admin/product/subtype
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Rau xanh",
+  "description": "Các loại rau xanh",
+  "product_type": 1
+}
+
+### Update Product Subtype
+PUT http://localhost:8002/v1/admin/product/subtype/1
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "name": "Rau xanh hữu cơ",
+  "description": "Các loại rau xanh hữu cơ",
+  "product_type": 1
+}
+
+### Delete Product Subtype
+DELETE http://localhost:8002/v1/admin/product/subtype/1
+Authorization: Bearer {{access_token}}
+
+### ===== PRODUCT SUBTYPE MAPPING =====
+
+### Add Product Subtype Mapping
+POST http://localhost:8002/v1/admin/product/subtype/mapping
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "product_id": 1,
+  "subtype_ids": [1, 2, 3]
+}
+
+### Remove Product Subtype Mapping
+DELETE http://localhost:8002/v1/admin/product/subtype/mapping
+Content-Type: application/json
+Authorization: Bearer {{access_token}}
+
+{
+  "product_id": 1,
+  "subtype_ids": [1, 2]
+}
+
+### ===== PRODUCT SUBTYPE RELATIONS =====
+
+### Add Product Subtype Relation
+POST http://localhost:8002/v1/admin/product/1/subtype/1
+Authorization: Bearer {{access_token}}
+
+### Remove Product Subtype Relation
+DELETE http://localhost:8002/v1/admin/product/1/subtype/1
+Authorization: Bearer {{access_token}}
+
+### Remove All Product Subtype Relations
+DELETE http://localhost:8002/v1/admin/product/1/subtypes
+Authorization: Bearer {{access_token}}

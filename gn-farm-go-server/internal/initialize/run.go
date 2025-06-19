@@ -20,6 +20,7 @@ func Run() *gin.Engine {
 	InitPostgresC()
 	InitServiceInterface()
 	InitProductService()
+	InitInventoryService()
 	InitRedis()
 	InitKafka()
 	r := InitRouter()

@@ -4,4 +4,5 @@ type ManageRouterGroup struct {
 	UserRouter
 	AdminRouter
 	ProductManageRouter
+	InventoryManageRouter
 }

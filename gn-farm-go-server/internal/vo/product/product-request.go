@@ -23,21 +23,22 @@ type CreateProductRequest struct {
 
 // UpdateProductRequest represents a request to update a product with all fields
 type UpdateProductRequest struct {
-	ProductName            string          `json:"product_name" example:"Organic Tomato Premium"`
-	ProductPrice           string          `json:"product_price" example:"19.99"`
+	ID                    *int32          `json:"id,omitempty" example:"1"` // Thêm trường ID cho BulkUpdateProducts
+	ProductName            *string         `json:"product_name,omitempty" example:"Organic Tomato Premium"`
+	ProductPrice           *string         `json:"product_price,omitempty" example:"19.99"`
 	ProductStatus          *int32          `json:"product_status,omitempty" example:"1"`
-	ProductThumb           string          `json:"product_thumb" example:"https://example.com/tomato-premium.jpg"`
-	ProductPictures        []string        `json:"product_pictures"`
-	ProductVideos          []string        `json:"product_videos"`
+	ProductThumb           *string         `json:"product_thumb,omitempty" example:"https://example.com/tomato-premium.jpg"`
+	ProductPictures        *[]string       `json:"product_pictures,omitempty"`
+	ProductVideos          *[]string       `json:"product_videos,omitempty"`
 	ProductDescription     *string         `json:"product_description,omitempty" example:"Premium organic tomatoes"`
 	ProductQuantity        *int32          `json:"product_quantity,omitempty" example:"50"`
-	ProductType            int32           `json:"product_type" example:"1"`
-	SubProductType         []int32         `json:"sub_product_type" example:"[1,2]"`
+	ProductType            *int32          `json:"product_type,omitempty" example:"1"`
+	SubProductType         *[]int32        `json:"sub_product_type,omitempty" example:"[1,2]"`
 	Discount               *string         `json:"discount,omitempty" example:"15"`
-	ProductDiscountedPrice string          `json:"product_discounted_price" example:"16.99"`
-	ProductAttributes      json.RawMessage `json:"product_attributes"`
-	IsDraft                bool            `json:"is_draft" example:"false"`
-	IsPublished            bool            `json:"is_published" example:"true"`
+	ProductDiscountedPrice *string         `json:"product_discounted_price,omitempty" example:"16.99"`
+	ProductAttributes      json.RawMessage `json:"product_attributes,omitempty"`
+	IsDraft                *bool           `json:"is_draft,omitempty" example:"false"`
+	IsPublished            *bool           `json:"is_published,omitempty" example:"true"`
 }
 
 // BulkUpdateRequest represents a request to update multiple products

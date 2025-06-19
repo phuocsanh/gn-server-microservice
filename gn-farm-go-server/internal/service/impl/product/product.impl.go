@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/model"
@@ -426,23 +427,80 @@ func (w *productServiceWrapper) ListProductsWithFilter(ctx context.Context, prod
 }
 
 func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in *productVO.UpdateProductRequest) (codeResult int, out productVO.ProductResponse, err error) {
-	// Convert UpdateProductRequest to database.UpdateProductParams
-	params := database.UpdateProductParams{
-		ID:                     id,
-		ProductName:            in.ProductName,
-		ProductPrice:           in.ProductPrice,
-		ProductThumb:           in.ProductThumb,
-		ProductPictures:        in.ProductPictures,
-		ProductVideos:          in.ProductVideos,
-		ProductType:            in.ProductType,
-		SubProductType:         in.SubProductType,
-		ProductDiscountedPrice: in.ProductDiscountedPrice,
-		ProductAttributes:      in.ProductAttributes,
-		IsDraft:                sql.NullBool{Bool: in.IsDraft, Valid: true},
-		IsPublished:            sql.NullBool{Bool: in.IsPublished, Valid: true},
+	// Lấy sản phẩm hiện tại để có thông tin đầy đủ
+	existingProduct, err := w.ps.GetProduct(ctx, id)
+	if err != nil {
+		return response.ErrCodeInternalServerError, out, fmt.Errorf("failed to get existing product: %w", err)
 	}
 
-	// Handle optional fields
+	// Convert UpdateProductRequest to database.UpdateProductParams
+	params := database.UpdateProductParams{
+		ID: id,
+		// Sử dụng giá trị hiện tại cho các trường bắt buộc
+		ProductName: existingProduct.ProductName,
+		ProductPrice: existingProduct.ProductPrice,
+		ProductThumb: existingProduct.ProductThumb,
+		ProductPictures: existingProduct.ProductPictures,
+		ProductVideos: existingProduct.ProductVideos,
+		ProductType: existingProduct.ProductType,
+		SubProductType: existingProduct.SubProductType,
+		ProductDiscountedPrice: existingProduct.ProductDiscountedPrice,
+	}
+
+	// Xử lý tất cả các trường con trỏ
+	if in.ProductName != nil {
+		params.ProductName = *in.ProductName
+	}
+	if in.ProductPrice != nil {
+		params.ProductPrice = *in.ProductPrice
+		
+		// Nếu giá thay đổi nhưng không có giá khuyến mãi mới, tính toán lại giá khuyến mãi
+		if in.ProductDiscountedPrice == nil && existingProduct.Discount.Valid {
+			// Lấy phần trăm giảm giá
+			discountStr := existingProduct.Discount.String
+			discount, err := strconv.ParseFloat(discountStr, 64)
+			if err == nil && discount > 0 {
+				// Chuyển đổi giá mới sang float
+				priceFloat, err := strconv.ParseFloat(*in.ProductPrice, 64)
+				if err == nil {
+					// Tính giá khuyến mãi mới
+					discountedPrice := priceFloat * (1 - discount/100)
+					// Chuyển đổi lại thành string
+					params.ProductDiscountedPrice = fmt.Sprintf("%.0f", discountedPrice)
+				}
+			}
+		}
+	}
+	if in.ProductThumb != nil {
+		params.ProductThumb = *in.ProductThumb
+	}
+	if in.ProductPictures != nil {
+		params.ProductPictures = *in.ProductPictures
+	}
+	if in.ProductVideos != nil {
+		params.ProductVideos = *in.ProductVideos
+	}
+	if in.ProductType != nil {
+		params.ProductType = *in.ProductType
+	}
+	if in.SubProductType != nil {
+		params.SubProductType = *in.SubProductType
+	}
+	if in.ProductDiscountedPrice != nil {
+		params.ProductDiscountedPrice = *in.ProductDiscountedPrice
+	}
+	if in.ProductAttributes != nil && len(in.ProductAttributes) > 0 {
+		params.ProductAttributes = in.ProductAttributes
+	} else {
+		// Giữ nguyên thuộc tính hiện tại nếu không có thuộc tính mới
+		params.ProductAttributes = existingProduct.ProductAttributes
+	}
+	if in.IsDraft != nil {
+		params.IsDraft = sql.NullBool{Bool: *in.IsDraft, Valid: true}
+	}
+	if in.IsPublished != nil {
+		params.IsPublished = sql.NullBool{Bool: *in.IsPublished, Valid: true}
+	}
 	if in.ProductStatus != nil {
 		params.ProductStatus = sql.NullInt32{Int32: *in.ProductStatus, Valid: true}
 	}
@@ -454,6 +512,25 @@ func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in 
 	}
 	if in.Discount != nil {
 		params.Discount = sql.NullString{String: *in.Discount, Valid: true}
+		
+		// Nếu phần trăm giảm giá thay đổi, tính toán lại giá khuyến mãi
+		discount, err := strconv.ParseFloat(*in.Discount, 64)
+		if err == nil && discount > 0 {
+			// Xác định giá gốc để tính
+			priceStr := existingProduct.ProductPrice
+			if in.ProductPrice != nil {
+				priceStr = *in.ProductPrice
+			}
+			
+			// Chuyển đổi giá sang float
+			priceFloat, err := strconv.ParseFloat(priceStr, 64)
+			if err == nil {
+				// Tính giá khuyến mãi
+				discountedPrice := priceFloat * (1 - discount/100)
+				// Chuyển đổi lại thành string
+				params.ProductDiscountedPrice = fmt.Sprintf("%.0f", discountedPrice)
+			}
+		}
 	}
 
 	// Update product using the underlying service
@@ -497,7 +574,13 @@ func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in 
 }
 
 func (w *productServiceWrapper) DeleteProduct(ctx context.Context, id int32) (codeResult int, err error) {
-	return response.ErrCodeInternalServerError, fmt.Errorf("DeleteProduct not implemented yet")
+	// Gọi hàm DeleteProduct của lớp productService
+	err = w.ps.DeleteProduct(ctx, id)
+	if err != nil {
+		return response.ErrCodeInternalServerError, fmt.Errorf("failed to delete product: %w", err)
+	}
+
+	return response.ErrCodeSuccess, nil
 }
 
 func (w *productServiceWrapper) SearchProducts(ctx context.Context, query string, limit, offset int32) (codeResult int, out []productVO.ProductResponse, err error) {
@@ -609,7 +692,30 @@ func (w *productServiceWrapper) GetProductStats(ctx context.Context) (codeResult
 }
 
 func (w *productServiceWrapper) BulkUpdateProducts(ctx context.Context, in []productVO.UpdateProductRequest) (codeResult int, out []productVO.ProductResponse, err error) {
-	return response.ErrCodeInternalServerError, nil, fmt.Errorf("BulkUpdateProducts not implemented yet")
+	// Khởi tạo mảng kết quả
+	out = make([]productVO.ProductResponse, 0, len(in))
+
+	// Xử lý từng yêu cầu cập nhật
+	for _, updateReq := range in {
+		// Kiểm tra ID sản phẩm có tồn tại trong request không
+		if updateReq.ID == nil {
+			return response.ErrCodeParamInvalid, nil, fmt.Errorf("product ID is required for bulk update")
+		}
+		
+		// Lấy ID sản phẩm từ request
+		productID := *updateReq.ID
+		
+		// Gọi hàm UpdateProduct để cập nhật từng sản phẩm
+		codeResult, productResp, err := w.UpdateProduct(ctx, productID, &updateReq)
+		if err != nil {
+			return codeResult, nil, fmt.Errorf("failed to update product %d: %w", productID, err)
+		}
+		
+		// Thêm sản phẩm đã cập nhật vào mảng kết quả
+		out = append(out, productResp)
+	}
+
+	return response.ErrCodeSuccess, out, nil
 }
 
 // convertDatabaseProductToResponse converts database.Product to productVO.ProductResponse

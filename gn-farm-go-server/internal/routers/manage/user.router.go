@@ -6,13 +6,13 @@ type UserRouter struct{}
 
 func (pr *UserRouter) InitUserRouter(Router *gin.RouterGroup) {
 	// public router
-	userRouterPublic := Router.Group("/admin/user")
+	userRouterPublic := Router.Group("/manage/user")
 	{
 		userRouterPublic.POST("/register")
 		// userRouterPublic.POST("/otp")
 	}
 	// private router
-	userRouterPrivate := Router.Group("/admin/user")
+	userRouterPrivate := Router.Group("/manage/user")
 	// userRouterPrivate.Use(limiter())
 	// userRouterPrivate.Use(Authen())
 	// userRouterPrivate.Use(Permission())

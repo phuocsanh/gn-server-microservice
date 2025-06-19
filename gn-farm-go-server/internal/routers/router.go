@@ -5,6 +5,7 @@ import (
 	"gn-farm-go-server/internal/routers/manage"
 	"gn-farm-go-server/internal/routers/product"
 	"gn-farm-go-server/internal/routers/user"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,8 +32,23 @@ func NewRouter() *gin.Engine {
 		productRouter.InitProductRouter(v1)
 
 		// Initialize manage routes
-		productManageRouter := manage.ProductManageRouter{}
-		productManageRouter.InitProductManageRouter(v1)
+		manageRouterGroup := manage.ManageRouterGroup{}
+		
+		// Initialize product manage routes
+		manageRouterGroup.ProductManageRouter.InitProductManageRouter(v1)
+
+		// Initialize inventory manage routes with error handling
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("PANIC when initializing inventory router: %v", r)
+				}
+			}()
+			
+			log.Println("INIT: About to initialize inventory router...")
+			manageRouterGroup.InventoryManageRouter.InitInventoryManageRouter(v1)
+			log.Println("INIT: Inventory router initialized successfully")
+		}()
 	}
 
 	return r

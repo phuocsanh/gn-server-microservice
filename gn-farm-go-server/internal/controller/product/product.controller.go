@@ -383,10 +383,16 @@ func (c *productController) BulkUpdateProducts(ctx *gin.Context) {
 	updateRequests := make([]product.UpdateProductRequest, len(req.Products))
 	for i, item := range req.Products {
 		// Tạo UpdateProductRequest từ ProductUpdateItem
+		// Chuyển đổi string sang *string và int sang *int32
+		productName := item.ProductName
+		productPrice := item.ProductPrice
+		productID := int32(item.ID) // Chuyển đổi từ int sang int32
+		
 		updateRequests[i] = product.UpdateProductRequest{
-			ProductName: item.ProductName,
-			// Các trường khác sẽ được thêm tùy theo yêu cầu cụ thể
-			// Ví dụ: ProductPrice, ProductStatus, v.v.
+			ID: &productID, // Truyền ID sản phẩm
+			ProductName: &productName,
+			ProductPrice: &productPrice,
+			// Các trường khác có thể được thêm tùy theo yêu cầu
 		}
 	}
 

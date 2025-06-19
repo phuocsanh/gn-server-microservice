@@ -27,11 +27,11 @@ func InitRouter() *gin.Engine {
 	
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5174", "http://localhost:3000"},
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 	// r.Use() // limiter global
 	manageRouter := routers.RouterGroupApp.Manage
@@ -56,7 +56,10 @@ func InitRouter() *gin.Engine {
 	{
 		manageRouter.InitUserRouter(MainGroup)
 		manageRouter.InitAdminRouter(MainGroup)
+		manageRouter.InitInventoryManageRouter(MainGroup)
+		manageRouter.InitProductManageRouter(MainGroup)
 	}
+
 
 	return r
 }

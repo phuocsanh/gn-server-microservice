@@ -10,11 +10,26 @@ import (
 	"database/sql"
 	"github.com/google/wire"
 	"gn-farm-go-server/global"
+	inventory2 "gn-farm-go-server/internal/controller/inventory"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/impl/inventory"
 	"gn-farm-go-server/internal/service/impl/product"
 	"gn-farm-go-server/internal/service/impl/user"
 )
+
+// Injectors from inventory.wire.go:
+
+func InitializeInventoryService(db *database.Queries) service.IInventoryService {
+	iInventoryService := inventory.NewInventoryService(db)
+	return iInventoryService
+}
+
+func InitializeInventoryController(db *database.Queries) *inventory2.InventoryController {
+	iInventoryService := inventory.NewInventoryService(db)
+	inventoryController := inventory2.NewInventoryController(iInventoryService)
+	return inventoryController
+}
 
 // Injectors from product-type.wire.go:
 
@@ -67,6 +82,10 @@ func InitUserAuthService() (service.IUserAuth, error) {
 	sUserAuth := user.NewUserAuthImpl(queries)
 	return sUserAuth, nil
 }
+
+// inventory.wire.go:
+
+var inventorySet = wire.NewSet(inventory.NewInventoryService, inventory2.NewInventoryController)
 
 // product-type.wire.go:
 
