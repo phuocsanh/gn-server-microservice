@@ -16,6 +16,9 @@ func (pr *ProductManageRouter) InitProductManageRouter(Router *gin.RouterGroup) 
 	{
 		// Product routes
 		productRouterPrivate.GET("", product.Product.ListProducts)
+		productRouterPrivate.GET("/search", product.Product.SearchProducts)
+		productRouterPrivate.GET("/filter", product.Product.FilterProducts)
+		productRouterPrivate.GET("/stats", product.Product.GetProductStats)
 		productRouterPrivate.GET("/:id", product.Product.GetProduct)
 		productRouterPrivate.POST("", product.Product.CreateProduct)
 		productRouterPrivate.PUT("/:id", product.Product.UpdateProduct)
