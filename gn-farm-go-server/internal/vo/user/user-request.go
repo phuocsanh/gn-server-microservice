@@ -2,44 +2,44 @@ package user
 
 // LoginRequest định nghĩa cấu trúc cho request đăng nhập
 type LoginRequest struct {
-	UserAccount  string `json:"user_account" example:"user@example.com"`
-	UserPassword string `json:"user_password" example:"securePassword123"`
+	UserAccount  string `json:"userAccount" example:"user@example.com"`
+	UserPassword string `json:"userPassword" example:"securePassword123"`
 }
 
 // RegisterRequest định nghĩa cấu trúc cho request đăng ký
 type RegisterRequest struct {
-	VerifyKey     string `json:"verify_key" example:"user@example.com"`
-	VerifyType    int    `json:"verify_type" example:"1"`
-	VerifyPurpose string `json:"verify_purpose" example:"TEST_USER"`
+	VerifyKey     string `json:"verifyKey" example:"user@example.com"`
+	VerifyType    int    `json:"verifyType" example:"1"`
+	VerifyPurpose string `json:"verifyPurpose" example:"TEST_USER"`
 }
 
 // VerifyOTPRequest định nghĩa cấu trúc cho request xác thực OTP
 type VerifyOTPRequest struct {
-	VerifyKey  string `json:"verify_key" example:"user@example.com"`
-	VerifyCode string `json:"verify_code" example:"123456"`
+	VerifyKey  string `json:"verifyKey" example:"user@example.com"`
+	VerifyCode string `json:"verifyCode" example:"123456"`
 }
 
 // UpdatePasswordRequest định nghĩa cấu trúc cho request cập nhật mật khẩu
 type UpdatePasswordRequest struct {
-	UserToken    string `json:"user_token" example:"abc123token"`
-	UserPassword string `json:"user_password" example:"newSecurePassword123"`
+	UserToken    string `json:"userToken" example:"abc123token"`
+	UserPassword string `json:"userPassword" example:"newSecurePassword123"`
 }
 
 // RefreshTokenRequest định nghĩa cấu trúc cho request làm mới token
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	RefreshToken string `json:"refreshToken" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 }
 
 // SetupTwoFactorAuthRequest định nghĩa cấu trúc cho request thiết lập xác thực 2 yếu tố
 type SetupTwoFactorAuthRequest struct {
-	TwoFactorAuthType string `json:"two_factor_auth_type" example:"EMAIL"`
-	TwoFactorEmail    string `json:"two_factor_email" example:"user@example.com"`
+	TwoFactorAuthType string `json:"twoFactorAuthType" example:"EMAIL"`
+	TwoFactorEmail    string `json:"twoFactorEmail" example:"user@example.com"`
 }
 
 // TwoFactorVerificationRequest định nghĩa cấu trúc cho request xác thực 2 yếu tố
 type TwoFactorVerificationRequest struct {
-	VerifyKey  string `json:"verify_key" example:"user@example.com"`
-	VerifyCode string `json:"verify_code" example:"123456"`
+	VerifyKey  string `json:"verifyKey" example:"user@example.com"`
+	VerifyCode string `json:"verifyCode" example:"123456"`
 }
 
 // =============================================================================
@@ -48,13 +48,13 @@ type TwoFactorVerificationRequest struct {
 
 // SetupTwoFactorAuthServiceRequest for service layer (includes UserId from JWT)
 type SetupTwoFactorAuthServiceRequest struct {
-	UserId            uint32 `json:"user_id"`
-	TwoFactorAuthType string `json:"two_factor_auth_type"`
-	TwoFactorEmail    string `json:"two_factor_email"`
+	UserId            uint32 `json:"userId"`
+	TwoFactorAuthType string `json:"twoFactorAuthType"`
+	TwoFactorEmail    string `json:"twoFactorEmail"`
 }
 
 // TwoFactorVerificationServiceRequest for service layer (includes UserId from JWT)
 type TwoFactorVerificationServiceRequest struct {
-	UserId        uint32 `json:"user_id"`
-	TwoFactorCode string `json:"two_factor_code"`
+	UserId        uint32 `json:"userId"`
+	TwoFactorCode string `json:"twoFactorCode"`
 }

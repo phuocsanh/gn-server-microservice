@@ -8,53 +8,53 @@ import (
 // InventoryReceiptResponse phản hồi thông tin phiếu nhập kho
 type InventoryReceiptResponse struct {
 	ID               int32                         `json:"id"`
-	ReceiptCode      string                        `json:"receipt_code"`
-	SupplierName     *string                       `json:"supplier_name"`
-	SupplierContact  *string                       `json:"supplier_contact"`
-	CreatedByUserID  int32                         `json:"created_by_user_id"`
-	CheckedByUserID  *int32                        `json:"checked_by_user_id"`
-	TotalAmount      string                        `json:"total_amount"`
-	TotalItems       int32                         `json:"total_items"`
+	ReceiptCode      string                        `json:"receiptCode"`
+	SupplierName     *string                       `json:"supplierName"`
+	SupplierContact  *string                       `json:"supplierContact"`
+	CreatedByUserID  int32                         `json:"createdByUserId"`
+	CheckedByUserID  *int32                        `json:"checkedByUserId"`
+	TotalAmount      string                        `json:"totalAmount"`
+	TotalItems       int32                         `json:"totalItems"`
 	Notes            *string                       `json:"notes"`
 	Status           int32                         `json:"status"`
-	StatusText       string                        `json:"status_text"`
-	ReceiptDate      time.Time                     `json:"receipt_date"`
-	CreatedAt        time.Time                     `json:"created_at"`
-	UpdatedAt        time.Time                     `json:"updated_at"`
+	StatusText       string                        `json:"statusText"`
+	ReceiptDate      time.Time                     `json:"receiptDate"`
+	CreatedAt        time.Time                     `json:"createdAt"`
+	UpdatedAt        time.Time                     `json:"updatedAt"`
 	Items            []InventoryReceiptItemResponse `json:"items,omitempty"`
 }
 
 // InventoryReceiptItemResponse phản hồi chi tiết sản phẩm trong phiếu nhập
 type InventoryReceiptItemResponse struct {
 	ID          int32      `json:"id"`
-	ReceiptID   int32      `json:"receipt_id"`
-	ProductID   int32      `json:"product_id"`
-	ProductName *string    `json:"product_name,omitempty"`
+	ReceiptID   int32      `json:"receiptId"`
+	ProductID   int32      `json:"productId"`
+	ProductName *string    `json:"productName,omitempty"`
 	Quantity    int32      `json:"quantity"`
-	UnitPrice   string     `json:"unit_price"`
-	TotalPrice  string     `json:"total_price"`
-	ExpiryDate  *time.Time `json:"expiry_date"`
-	BatchNumber *string    `json:"batch_number"`
+	UnitPrice   string     `json:"unitPrice"`
+	TotalPrice  string     `json:"totalPrice"`
+	ExpiryDate  *time.Time `json:"expiryDate"`
+	BatchNumber *string    `json:"batchNumber"`
 	Notes       *string    `json:"notes"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
 // InventoryHistoryResponse phản hồi lịch sử tồn kho
 type InventoryHistoryResponse struct {
 	ID               int32     `json:"id"`
-	ProductID        int32     `json:"product_id"`
-	ProductName      *string   `json:"product_name,omitempty"`
-	ReceiptItemID    *int32    `json:"receipt_item_id"`
-	ChangeType       string    `json:"change_type"`
-	ChangeTypeText   string    `json:"change_type_text"`
-	QuantityBefore   int32     `json:"quantity_before"`
-	QuantityChange   int32     `json:"quantity_change"`
-	QuantityAfter    int32     `json:"quantity_after"`
-	UnitPrice        *string   `json:"unit_price"`
+	ProductID        int32     `json:"productId"`
+	ProductName      *string   `json:"productName,omitempty"`
+	ReceiptItemID    *int32    `json:"receiptItemId"`
+	ChangeType       string    `json:"changeType"`
+	ChangeTypeText   string    `json:"changeTypeText"`
+	QuantityBefore   int32     `json:"quantityBefore"`
+	QuantityChange   int32     `json:"quantityChange"`
+	QuantityAfter    int32     `json:"quantityAfter"`
+	UnitPrice        *string   `json:"unitPrice"`
 	Reason           *string   `json:"reason"`
-	CreatedByUserID  int32     `json:"created_by_user_id"`
-	CreatedAt        time.Time `json:"created_at"`
+	CreatedByUserID  int32     `json:"createdByUserId"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 // ListInventoryReceiptsResponse phản hồi danh sách phiếu nhập kho
@@ -63,7 +63,7 @@ type ListInventoryReceiptsResponse struct {
 	Total      int64                      `json:"total"`
 	Page       int32                      `json:"page"`
 	Limit      int32                      `json:"limit"`
-	TotalPages int32                      `json:"total_pages"`
+	TotalPages int32                      `json:"totalPages"`
 }
 
 // ListInventoryHistoryResponse phản hồi danh sách lịch sử tồn kho
@@ -72,7 +72,7 @@ type ListInventoryHistoryResponse struct {
 	Total      int64                      `json:"total"`
 	Page       int32                      `json:"page"`
 	Limit      int32                      `json:"limit"`
-	TotalPages int32                      `json:"total_pages"`
+	TotalPages int32                      `json:"totalPages"`
 }
 
 // GetInventoryHistoryResponse phản hồi lịch sử tồn kho theo sản phẩm

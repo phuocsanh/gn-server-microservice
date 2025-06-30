@@ -2,15 +2,15 @@ package user
 
 // UserInfo định nghĩa thông tin user cơ bản
 type UserInfo struct {
-	UserID      int64  `json:"user_id"`
-	UserAccount string `json:"user_account"`
-	UserEmail   string `json:"user_email"`
+	UserID      int64  `json:"userId"`
+	UserAccount string `json:"userAccount"`
+	UserEmail   string `json:"userEmail"`
 }
 
 // TokenPair định nghĩa cặp access và refresh token
 type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 
@@ -19,7 +19,7 @@ type TokenPair struct {
 type LoginResponse struct {
 	User      UserInfo  `json:"user"`
 	Tokens    TokenPair `json:"tokens"`
-	ExpiresIn int       `json:"expires_in"`
+	ExpiresIn int       `json:"expiresIn"`
 	Message   string    `json:"message,omitempty"`
 }
 
@@ -27,10 +27,10 @@ type LoginResponse struct {
 
 // VerifyOTPResponse định nghĩa cấu trúc cho response xác thực OTP
 type VerifyOTPResponse struct {
-	VerifyToken string    `json:"verify_token,omitempty"`
+	VerifyToken string    `json:"verifyToken,omitempty"`
 	User        UserInfo  `json:"user,omitempty"`
 	Tokens      TokenPair `json:"tokens,omitempty"`
-	ExpiresIn   int       `json:"expires_in,omitempty"`
+	ExpiresIn   int       `json:"expiresIn,omitempty"`
 	Message     string    `json:"message,omitempty"`
 }
 
@@ -38,7 +38,7 @@ type VerifyOTPResponse struct {
 type RefreshTokenResponse struct {
 	User      UserInfo  `json:"user"`
 	Tokens    TokenPair `json:"tokens"`
-	ExpiresIn int       `json:"expires_in"`
+	ExpiresIn int       `json:"expiresIn"`
 	Message   string    `json:"message,omitempty"`
 }
 

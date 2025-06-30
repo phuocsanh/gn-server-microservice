@@ -23,7 +23,7 @@ INSERT INTO product_types (
 type CreateProductTypeParams struct {
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
-	ImageUrl    sql.NullString `json:"image_url"`
+	ImageUrl    sql.NullString `json:"imageUrl"`
 }
 
 func (q *Queries) CreateProductType(ctx context.Context, arg CreateProductTypeParams) (ProductType, error) {
@@ -116,7 +116,7 @@ type UpdateProductTypeParams struct {
 	ID          int32          `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
-	ImageUrl    sql.NullString `json:"image_url"`
+	ImageUrl    sql.NullString `json:"imageUrl"`
 }
 
 func (q *Queries) UpdateProductType(ctx context.Context, arg UpdateProductTypeParams) (ProductType, error) {

@@ -20,8 +20,8 @@ INSERT INTO product_subtype_mappings (
 `
 
 type AddProductSubtypeMappingParams struct {
-	ProductTypeID    int32 `json:"product_type_id"`
-	ProductSubtypeID int32 `json:"product_subtype_id"`
+	ProductTypeID    int32 `json:"productTypeId"`
+	ProductSubtypeID int32 `json:"productSubtypeId"`
 }
 
 func (q *Queries) AddProductSubtypeMapping(ctx context.Context, arg AddProductSubtypeMappingParams) error {
@@ -157,8 +157,8 @@ WHERE product_type_id = $1 AND product_subtype_id = $2
 `
 
 type RemoveProductSubtypeMappingParams struct {
-	ProductTypeID    int32 `json:"product_type_id"`
-	ProductSubtypeID int32 `json:"product_subtype_id"`
+	ProductTypeID    int32 `json:"productTypeId"`
+	ProductSubtypeID int32 `json:"productSubtypeId"`
 }
 
 func (q *Queries) RemoveProductSubtypeMapping(ctx context.Context, arg RemoveProductSubtypeMappingParams) error {

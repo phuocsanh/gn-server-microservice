@@ -21,8 +21,8 @@ INSERT INTO product_subtype_relations (
 `
 
 type AddProductSubtypeRelationParams struct {
-	ProductID        int32 `json:"product_id"`
-	ProductSubtypeID int32 `json:"product_subtype_id"`
+	ProductID        int32 `json:"productId"`
+	ProductSubtypeID int32 `json:"productSubtypeId"`
 }
 
 func (q *Queries) AddProductSubtypeRelation(ctx context.Context, arg AddProductSubtypeRelationParams) error {
@@ -38,11 +38,11 @@ WHERE psr.product_id = $1
 `
 
 type GetProductSubtypeRelationsRow struct {
-	ProductID          int32          `json:"product_id"`
-	ProductSubtypeID   int32          `json:"product_subtype_id"`
-	CreatedAt          time.Time      `json:"created_at"`
-	SubtypeName        string         `json:"subtype_name"`
-	SubtypeDescription sql.NullString `json:"subtype_description"`
+	ProductID          int32          `json:"productId"`
+	ProductSubtypeID   int32          `json:"productSubtypeId"`
+	CreatedAt          time.Time      `json:"createdAt"`
+	SubtypeName        string         `json:"subtypeName"`
+	SubtypeDescription sql.NullString `json:"subtypeDescription"`
 }
 
 func (q *Queries) GetProductSubtypeRelations(ctx context.Context, productID int32) ([]GetProductSubtypeRelationsRow, error) {
@@ -90,8 +90,8 @@ WHERE product_id = $1 AND product_subtype_id = $2
 `
 
 type RemoveProductSubtypeRelationParams struct {
-	ProductID        int32 `json:"product_id"`
-	ProductSubtypeID int32 `json:"product_subtype_id"`
+	ProductID        int32 `json:"productId"`
+	ProductSubtypeID int32 `json:"productSubtypeId"`
 }
 
 func (q *Queries) RemoveProductSubtypeRelation(ctx context.Context, arg RemoveProductSubtypeRelationParams) error {

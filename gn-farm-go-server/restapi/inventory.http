@@ -9,24 +9,24 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "supplier_id": 1,
-  "receipt_date": "2024-06-19T10:00:00Z",
-  "total_amount": "1500000",
+  "supplierId": 1,
+  "receiptDate": "2024-06-19T10:00:00Z",
+  "totalAmount": "1500000",
   "notes": "Nhập hàng đầu tháng 6",
   "items": [
     {
-      "product_id": 1,
+      "productId": 1,
       "quantity": 100,
-      "unit_price": "10000",
-      "total_price": "1000000",
-      "expiry_date": "2024-12-31T00:00:00Z"
+      "unitPrice": "10000",
+      "totalPrice": "1000000",
+      "expiryDate": "2024-12-31T00:00:00Z"
     },
     {
-      "product_id": 2,
+      "productId": 2,
       "quantity": 50,
-      "unit_price": "10000",
-      "total_price": "500000",
-      "expiry_date": "2024-11-30T00:00:00Z"
+      "unitPrice": "10000",
+      "totalPrice": "500000",
+      "expiryDate": "2024-11-30T00:00:00Z"
     }
   ]
 }
@@ -45,24 +45,24 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "supplier_id": 1,
-  "receipt_date": "2024-06-19T10:30:00Z",
-  "total_amount": "1600000",
+  "supplierId": 1,
+  "receiptDate": "2024-06-19T10:30:00Z",
+  "totalAmount": "1600000",
   "notes": "Nhập hàng đầu tháng 6 - Cập nhật",
   "items": [
     {
-      "product_id": 1,
+      "productId": 1,
       "quantity": 120,
-      "unit_price": "10000",
-      "total_price": "1200000",
-      "expiry_date": "2024-12-31T00:00:00Z"
+      "unitPrice": "10000",
+      "totalPrice": "1200000",
+      "expiryDate": "2024-12-31T00:00:00Z"
     },
     {
-      "product_id": 2,
+      "productId": 2,
       "quantity": 40,
-      "unit_price": "10000",
-      "total_price": "400000",
-      "expiry_date": "2024-11-30T00:00:00Z"
+      "unitPrice": "10000",
+      "totalPrice": "400000",
+      "expiryDate": "2024-11-30T00:00:00Z"
     }
   ]
 }
@@ -74,7 +74,7 @@ Authorization: Bearer {{access_token}}
 
 {
   "approved": true,
-  "approval_notes": "Phiếu nhập kho đã được kiểm tra và duyệt"
+  "approvalNotes": "Phiếu nhập kho đã được kiểm tra và duyệt"
 }
 
 ### 6. Từ chối phiếu nhập kho
@@ -84,7 +84,7 @@ Authorization: Bearer {{access_token}}
 
 {
   "approved": false,
-  "approval_notes": "Phiếu nhập kho không đúng quy cách, cần chỉnh sửa"
+  "approvalNotes": "Phiếu nhập kho không đúng quy cách, cần chỉnh sửa"
 }
 
 ### 7. Xóa phiếu nhập kho
@@ -125,8 +125,8 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "supplier_id": 1,
-  "total_amount": "1500000"
+  "supplierId": 1,
+  "totalAmount": "1500000"
 }
 
 ### 16. Test với ID không tồn tại

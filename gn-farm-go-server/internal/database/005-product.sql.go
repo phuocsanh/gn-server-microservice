@@ -54,25 +54,25 @@ INSERT INTO products (
 `
 
 type CreateProductParams struct {
-	ProductName            string                `json:"product_name"`
-	ProductPrice           string                `json:"product_price"`
-	ProductStatus          sql.NullInt32         `json:"product_status"`
-	ProductThumb           string                `json:"product_thumb"`
-	ProductPictures        []string              `json:"product_pictures"`
-	ProductVideos          []string              `json:"product_videos"`
-	ProductRatingsAverage  sql.NullString        `json:"product_ratings_average"`
-	ProductVariations      pqtype.NullRawMessage `json:"product_variations"`
-	ProductDescription     sql.NullString        `json:"product_description"`
-	ProductSlug            sql.NullString        `json:"product_slug"`
-	ProductQuantity        sql.NullInt32         `json:"product_quantity"`
-	ProductType            int32                 `json:"product_type"`
-	SubProductType         []int32               `json:"sub_product_type"`
+	ProductName            string                `json:"productName"`
+	ProductPrice           string                `json:"productPrice"`
+	ProductStatus          sql.NullInt32         `json:"productStatus"`
+	ProductThumb           string                `json:"productThumb"`
+	ProductPictures        []string              `json:"productPictures"`
+	ProductVideos          []string              `json:"productVideos"`
+	ProductRatingsAverage  sql.NullString        `json:"productRatingsAverage"`
+	ProductVariations      pqtype.NullRawMessage `json:"productVariations"`
+	ProductDescription     sql.NullString        `json:"productDescription"`
+	ProductSlug            sql.NullString        `json:"productSlug"`
+	ProductQuantity        sql.NullInt32         `json:"productQuantity"`
+	ProductType            int32                 `json:"productType"`
+	SubProductType         []int32               `json:"subProductType"`
 	Discount               sql.NullString        `json:"discount"`
-	ProductDiscountedPrice string                `json:"product_discounted_price"`
-	ProductSelled          sql.NullInt32         `json:"product_selled"`
-	ProductAttributes      json.RawMessage       `json:"product_attributes"`
-	IsDraft                sql.NullBool          `json:"is_draft"`
-	IsPublished            sql.NullBool          `json:"is_published"`
+	ProductDiscountedPrice string                `json:"productDiscountedPrice"`
+	ProductSelled          sql.NullInt32         `json:"productSelled"`
+	ProductAttributes      json.RawMessage       `json:"productAttributes"`
+	IsDraft                sql.NullBool          `json:"isDraft"`
+	IsPublished            sql.NullBool          `json:"isPublished"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -193,11 +193,11 @@ OFFSET $7
 
 type FilterProductsParams struct {
 	Category  sql.NullInt32  `json:"category"`
-	MinPrice  sql.NullString `json:"min_price"`
-	MaxPrice  sql.NullString `json:"max_price"`
-	InStock   sql.NullBool   `json:"in_stock"`
-	SortBy    sql.NullString `json:"sort_by"`
-	SortOrder sql.NullString `json:"sort_order"`
+	MinPrice  sql.NullString `json:"minPrice"`
+	MaxPrice  sql.NullString `json:"maxPrice"`
+	InStock   sql.NullBool   `json:"inStock"`
+	SortBy    sql.NullString `json:"sortBy"`
+	SortOrder sql.NullString `json:"sortOrder"`
 	Offset    int32          `json:"offset"`
 	Limit     int32          `json:"limit"`
 }
@@ -307,15 +307,15 @@ WHERE is_published = true
 `
 
 type GetProductStatsRow struct {
-	TotalProducts      int64       `json:"total_products"`
-	InStockProducts    int64       `json:"in_stock_products"`
-	OutOfStockProducts int64       `json:"out_of_stock_products"`
-	TotalProductsSold  interface{} `json:"total_products_sold"`
-	AverageRating      interface{} `json:"average_rating"`
-	MinPrice           interface{} `json:"min_price"`
-	MaxPrice           interface{} `json:"max_price"`
-	AvgPrice           interface{} `json:"avg_price"`
-	TotalCategories    int64       `json:"total_categories"`
+	TotalProducts      int64       `json:"totalProducts"`
+	InStockProducts    int64       `json:"inStockProducts"`
+	OutOfStockProducts int64       `json:"outOfStockProducts"`
+	TotalProductsSold  interface{} `json:"totalProductsSold"`
+	AverageRating      interface{} `json:"averageRating"`
+	MinPrice           interface{} `json:"minPrice"`
+	MaxPrice           interface{} `json:"maxPrice"`
+	AvgPrice           interface{} `json:"avgPrice"`
+	TotalCategories    int64       `json:"totalCategories"`
 }
 
 func (q *Queries) GetProductStats(ctx context.Context) (GetProductStatsRow, error) {
@@ -344,7 +344,7 @@ OFFSET $2
 `
 
 type ListProductsParams struct {
-	Column1 interface{} `json:"column_1"`
+	Column1 interface{} `json:"column1"`
 	Offset  int32       `json:"offset"`
 }
 
@@ -415,8 +415,8 @@ OFFSET $3
 `
 
 type ListProductsWithFilterParams struct {
-	ProductType    sql.NullInt32 `json:"product_type"`
-	SubProductType sql.NullInt32 `json:"sub_product_type"`
+	ProductType    sql.NullInt32 `json:"productType"`
+	SubProductType sql.NullInt32 `json:"subProductType"`
 	Offset         int32         `json:"offset"`
 	Limit          interface{}   `json:"limit"`
 }
@@ -485,7 +485,7 @@ OFFSET $3
 `
 
 type SearchProductsParams struct {
-	Column1 sql.NullString `json:"column_1"`
+	Column1 sql.NullString `json:"column1"`
 	Limit   int32          `json:"limit"`
 	Offset  int32          `json:"offset"`
 }
@@ -565,25 +565,25 @@ RETURNING id, product_name, product_price, product_status, product_thumb, produc
 
 type UpdateProductParams struct {
 	ID                     int32                 `json:"id"`
-	ProductName            string                `json:"product_name"`
-	ProductPrice           string                `json:"product_price"`
-	ProductStatus          sql.NullInt32         `json:"product_status"`
-	ProductThumb           string                `json:"product_thumb"`
-	ProductPictures        []string              `json:"product_pictures"`
-	ProductVideos          []string              `json:"product_videos"`
-	ProductRatingsAverage  sql.NullString        `json:"product_ratings_average"`
-	ProductVariations      pqtype.NullRawMessage `json:"product_variations"`
-	ProductDescription     sql.NullString        `json:"product_description"`
-	ProductSlug            sql.NullString        `json:"product_slug"`
-	ProductQuantity        sql.NullInt32         `json:"product_quantity"`
-	ProductType            int32                 `json:"product_type"`
-	SubProductType         []int32               `json:"sub_product_type"`
+	ProductName            string                `json:"productName"`
+	ProductPrice           string                `json:"productPrice"`
+	ProductStatus          sql.NullInt32         `json:"productStatus"`
+	ProductThumb           string                `json:"productThumb"`
+	ProductPictures        []string              `json:"productPictures"`
+	ProductVideos          []string              `json:"productVideos"`
+	ProductRatingsAverage  sql.NullString        `json:"productRatingsAverage"`
+	ProductVariations      pqtype.NullRawMessage `json:"productVariations"`
+	ProductDescription     sql.NullString        `json:"productDescription"`
+	ProductSlug            sql.NullString        `json:"productSlug"`
+	ProductQuantity        sql.NullInt32         `json:"productQuantity"`
+	ProductType            int32                 `json:"productType"`
+	SubProductType         []int32               `json:"subProductType"`
 	Discount               sql.NullString        `json:"discount"`
-	ProductDiscountedPrice string                `json:"product_discounted_price"`
-	ProductSelled          sql.NullInt32         `json:"product_selled"`
-	ProductAttributes      json.RawMessage       `json:"product_attributes"`
-	IsDraft                sql.NullBool          `json:"is_draft"`
-	IsPublished            sql.NullBool          `json:"is_published"`
+	ProductDiscountedPrice string                `json:"productDiscountedPrice"`
+	ProductSelled          sql.NullInt32         `json:"productSelled"`
+	ProductAttributes      json.RawMessage       `json:"productAttributes"`
+	IsDraft                sql.NullBool          `json:"isDraft"`
+	IsPublished            sql.NullBool          `json:"isPublished"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {

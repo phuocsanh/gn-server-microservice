@@ -14,153 +14,197 @@ import (
 
 // Stores metadata for chat conversations
 type ChatConversation struct {
-	ConversationID   string         `json:"conversation_id"`
-	ConversationType string         `json:"conversation_type"`
-	ConversationName sql.NullString `json:"conversation_name"`
-	CreatedBy        int32          `json:"created_by"`
-	IsActive         sql.NullBool   `json:"is_active"`
-	CreatedAt        sql.NullTime   `json:"created_at"`
-	UpdatedAt        sql.NullTime   `json:"updated_at"`
+	ConversationID   string         `json:"conversationId"`
+	ConversationType string         `json:"conversationType"`
+	ConversationName sql.NullString `json:"conversationName"`
+	CreatedBy        int32          `json:"createdBy"`
+	IsActive         sql.NullBool   `json:"isActive"`
+	CreatedAt        sql.NullTime   `json:"createdAt"`
+	UpdatedAt        sql.NullTime   `json:"updatedAt"`
 }
 
 // Stores participants of chat conversations
 type ChatParticipant struct {
 	ID             int32          `json:"id"`
-	ConversationID string         `json:"conversation_id"`
-	UserID         int32          `json:"user_id"`
+	ConversationID string         `json:"conversationId"`
+	UserID         int32          `json:"userId"`
 	Role           sql.NullString `json:"role"`
-	JoinedAt       sql.NullTime   `json:"joined_at"`
-	LeftAt         sql.NullTime   `json:"left_at"`
+	JoinedAt       sql.NullTime   `json:"joinedAt"`
+	LeftAt         sql.NullTime   `json:"leftAt"`
+}
+
+type InventoryHistory struct {
+	ID              int32          `json:"id"`
+	ProductID       int32          `json:"productId"`
+	ReceiptItemID   sql.NullInt32  `json:"receiptItemId"`
+	ChangeType      string         `json:"changeType"`
+	QuantityBefore  int32          `json:"quantityBefore"`
+	QuantityChange  int32          `json:"quantityChange"`
+	QuantityAfter   int32          `json:"quantityAfter"`
+	UnitPrice       sql.NullString `json:"unitPrice"`
+	Reason          sql.NullString `json:"reason"`
+	CreatedByUserID int32          `json:"createdByUserId"`
+	CreatedAt       time.Time      `json:"createdAt"`
+}
+
+type InventoryReceipt struct {
+	ID              int32          `json:"id"`
+	ReceiptCode     string         `json:"receiptCode"`
+	SupplierName    sql.NullString `json:"supplierName"`
+	SupplierContact sql.NullString `json:"supplierContact"`
+	CreatedByUserID int32          `json:"createdByUserId"`
+	CheckedByUserID sql.NullInt32  `json:"checkedByUserId"`
+	TotalAmount     string         `json:"totalAmount"`
+	TotalItems      int32          `json:"totalItems"`
+	Notes           sql.NullString `json:"notes"`
+	Status          sql.NullInt32  `json:"status"`
+	ReceiptDate     time.Time      `json:"receiptDate"`
+	CreatedAt       time.Time      `json:"createdAt"`
+	UpdatedAt       time.Time      `json:"updatedAt"`
+}
+
+type InventoryReceiptItem struct {
+	ID          int32          `json:"id"`
+	ReceiptID   int32          `json:"receiptId"`
+	ProductID   int32          `json:"productId"`
+	Quantity    int32          `json:"quantity"`
+	UnitPrice   string         `json:"unitPrice"`
+	TotalPrice  string         `json:"totalPrice"`
+	ExpiryDate  sql.NullTime   `json:"expiryDate"`
+	BatchNumber sql.NullString `json:"batchNumber"`
+	Notes       sql.NullString `json:"notes"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
 }
 
 type Product struct {
 	ID                     int32                 `json:"id"`
-	ProductName            string                `json:"product_name"`
-	ProductPrice           string                `json:"product_price"`
-	ProductStatus          sql.NullInt32         `json:"product_status"`
-	ProductThumb           string                `json:"product_thumb"`
-	ProductPictures        []string              `json:"product_pictures"`
-	ProductVideos          []string              `json:"product_videos"`
-	ProductRatingsAverage  sql.NullString        `json:"product_ratings_average"`
-	ProductVariations      pqtype.NullRawMessage `json:"product_variations"`
-	ProductDescription     sql.NullString        `json:"product_description"`
-	ProductSlug            sql.NullString        `json:"product_slug"`
-	ProductQuantity        sql.NullInt32         `json:"product_quantity"`
-	ProductType            int32                 `json:"product_type"`
-	SubProductType         []int32               `json:"sub_product_type"`
+	ProductName            string                `json:"productName"`
+	ProductPrice           string                `json:"productPrice"`
+	ProductStatus          sql.NullInt32         `json:"productStatus"`
+	ProductThumb           string                `json:"productThumb"`
+	ProductPictures        []string              `json:"productPictures"`
+	ProductVideos          []string              `json:"productVideos"`
+	ProductRatingsAverage  sql.NullString        `json:"productRatingsAverage"`
+	ProductVariations      pqtype.NullRawMessage `json:"productVariations"`
+	ProductDescription     sql.NullString        `json:"productDescription"`
+	ProductSlug            sql.NullString        `json:"productSlug"`
+	ProductQuantity        sql.NullInt32         `json:"productQuantity"`
+	ProductType            int32                 `json:"productType"`
+	SubProductType         []int32               `json:"subProductType"`
 	Discount               sql.NullString        `json:"discount"`
-	ProductDiscountedPrice string                `json:"product_discounted_price"`
-	ProductSelled          sql.NullInt32         `json:"product_selled"`
-	ProductAttributes      json.RawMessage       `json:"product_attributes"`
-	IsDraft                sql.NullBool          `json:"is_draft"`
-	IsPublished            sql.NullBool          `json:"is_published"`
-	CreatedAt              time.Time             `json:"created_at"`
-	UpdatedAt              time.Time             `json:"updated_at"`
+	ProductDiscountedPrice string                `json:"productDiscountedPrice"`
+	ProductSelled          sql.NullInt32         `json:"productSelled"`
+	ProductAttributes      json.RawMessage       `json:"productAttributes"`
+	IsDraft                sql.NullBool          `json:"isDraft"`
+	IsPublished            sql.NullBool          `json:"isPublished"`
+	CreatedAt              time.Time             `json:"createdAt"`
+	UpdatedAt              time.Time             `json:"updatedAt"`
 }
 
 type ProductSubtype struct {
 	ID          int32          `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
 }
 
 type ProductSubtypeMapping struct {
-	ProductTypeID    int32     `json:"product_type_id"`
-	ProductSubtypeID int32     `json:"product_subtype_id"`
-	CreatedAt        time.Time `json:"created_at"`
+	ProductTypeID    int32     `json:"productTypeId"`
+	ProductSubtypeID int32     `json:"productSubtypeId"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 type ProductSubtypeRelation struct {
-	ProductID        int32     `json:"product_id"`
-	ProductSubtypeID int32     `json:"product_subtype_id"`
-	CreatedAt        time.Time `json:"created_at"`
+	ProductID        int32     `json:"productId"`
+	ProductSubtypeID int32     `json:"productSubtypeId"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 type ProductType struct {
 	ID          int32          `json:"id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
-	ImageUrl    sql.NullString `json:"image_url"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	ImageUrl    sql.NullString `json:"imageUrl"`
 }
 
 // users
 type User struct {
-	UserID         int32          `json:"user_id"`
-	UserAccount    string         `json:"user_account"`
-	UserPassword   string         `json:"user_password"`
-	UserSalt       string         `json:"user_salt"`
-	UserLoginTime  sql.NullTime   `json:"user_login_time"`
-	UserLogoutTime sql.NullTime   `json:"user_logout_time"`
-	UserLoginIp    sql.NullString `json:"user_login_ip"`
-	UserCreatedAt  sql.NullTime   `json:"user_created_at"`
-	UserUpdatedAt  sql.NullTime   `json:"user_updated_at"`
+	UserID         int32          `json:"userId"`
+	UserAccount    string         `json:"userAccount"`
+	UserPassword   string         `json:"userPassword"`
+	UserSalt       string         `json:"userSalt"`
+	UserLoginTime  sql.NullTime   `json:"userLoginTime"`
+	UserLogoutTime sql.NullTime   `json:"userLogoutTime"`
+	UserLoginIp    sql.NullString `json:"userLoginIp"`
+	UserCreatedAt  sql.NullTime   `json:"userCreatedAt"`
+	UserUpdatedAt  sql.NullTime   `json:"userUpdatedAt"`
 	// authentication is enabled for the user
-	IsTwoFactorEnabled sql.NullBool `json:"is_two_factor_enabled"`
+	IsTwoFactorEnabled sql.NullBool `json:"isTwoFactorEnabled"`
 }
 
 // user_profiles
 type UserProfile struct {
 	// User ID
-	UserID int64 `json:"user_id"`
+	UserID int64 `json:"userId"`
 	// User account
-	UserAccount string `json:"user_account"`
+	UserAccount string `json:"userAccount"`
 	// User nickname
-	UserNickname sql.NullString `json:"user_nickname"`
+	UserNickname sql.NullString `json:"userNickname"`
 	// User avatar
-	UserAvatar sql.NullString `json:"user_avatar"`
+	UserAvatar sql.NullString `json:"userAvatar"`
 	// User state: 0-Locked, 1-Activated, 2-Not Activated
-	UserState int16 `json:"user_state"`
+	UserState int16 `json:"userState"`
 	// Mobile phone number
-	UserMobile sql.NullString `json:"user_mobile"`
+	UserMobile sql.NullString `json:"userMobile"`
 	// User gender: 0-Secret, 1-Male, 2-Female
-	UserGender sql.NullInt16 `json:"user_gender"`
+	UserGender sql.NullInt16 `json:"userGender"`
 	// User birthday
-	UserBirthday sql.NullTime `json:"user_birthday"`
+	UserBirthday sql.NullTime `json:"userBirthday"`
 	// User email address
-	UserEmail sql.NullString `json:"user_email"`
+	UserEmail sql.NullString `json:"userEmail"`
 	// Authentication status: 0-Not Authenticated, 1-Pending, 2-Authenticated, 3-Failed
-	UserIsAuthentication int16 `json:"user_is_authentication"`
+	UserIsAuthentication int16 `json:"userIsAuthentication"`
 	// Record creation time
-	CreatedAt sql.NullTime `json:"created_at"`
+	CreatedAt sql.NullTime `json:"createdAt"`
 	// Record update time
-	UpdatedAt sql.NullTime `json:"updated_at"`
+	UpdatedAt sql.NullTime `json:"updatedAt"`
 }
 
 // user_two_factors
 type UserTwoFactor struct {
 	// Primary key auto-increment
-	TwoFactorID int32 `json:"two_factor_id"`
+	TwoFactorID int32 `json:"twoFactorId"`
 	// Foreign key linking to the user table
-	UserID int32 `json:"user_id"`
+	UserID int32 `json:"userId"`
 	// Type of 2FA method (SMS, Email, App)
-	TwoFactorAuthType string `json:"two_factor_auth_type"`
+	TwoFactorAuthType string `json:"twoFactorAuthType"`
 	// Secret information for 2FA (e.g., TOTP secret key for app 2FA)
-	TwoFactorAuthSecret string `json:"two_factor_auth_secret"`
+	TwoFactorAuthSecret string `json:"twoFactorAuthSecret"`
 	// Phone number for SMS 2FA (if applicable)
-	TwoFactorPhone sql.NullString `json:"two_factor_phone"`
+	TwoFactorPhone sql.NullString `json:"twoFactorPhone"`
 	// Email address for Email 2FA (if applicable)
-	TwoFactorEmail sql.NullString `json:"two_factor_email"`
+	TwoFactorEmail sql.NullString `json:"twoFactorEmail"`
 	// Activation status of the 2FA method
-	TwoFactorIsActive bool `json:"two_factor_is_active"`
+	TwoFactorIsActive bool `json:"twoFactorIsActive"`
 	// Timestamp of 2FA method creation
-	TwoFactorCreatedAt sql.NullTime `json:"two_factor_created_at"`
+	TwoFactorCreatedAt sql.NullTime `json:"twoFactorCreatedAt"`
 	// Timestamp of 2FA method update
-	TwoFactorUpdatedAt sql.NullTime `json:"two_factor_updated_at"`
+	TwoFactorUpdatedAt sql.NullTime `json:"twoFactorUpdatedAt"`
 }
 
 // account_user_verify
 type UserVerification struct {
-	VerifyID        int32         `json:"verify_id"`
-	VerifyOtp       string        `json:"verify_otp"`
-	VerifyKey       string        `json:"verify_key"`
-	VerifyKeyHash   string        `json:"verify_key_hash"`
-	VerifyType      sql.NullInt32 `json:"verify_type"`
-	IsVerified      sql.NullInt32 `json:"is_verified"`
-	IsDeleted       sql.NullInt32 `json:"is_deleted"`
-	VerifyCreatedAt sql.NullTime  `json:"verify_created_at"`
-	VerifyUpdatedAt sql.NullTime  `json:"verify_updated_at"`
+	VerifyID        int32         `json:"verifyId"`
+	VerifyOtp       string        `json:"verifyOtp"`
+	VerifyKey       string        `json:"verifyKey"`
+	VerifyKeyHash   string        `json:"verifyKeyHash"`
+	VerifyType      sql.NullInt32 `json:"verifyType"`
+	IsVerified      sql.NullInt32 `json:"isVerified"`
+	IsDeleted       sql.NullInt32 `json:"isDeleted"`
+	VerifyCreatedAt sql.NullTime  `json:"verifyCreatedAt"`
+	VerifyUpdatedAt sql.NullTime  `json:"verifyUpdatedAt"`
 }

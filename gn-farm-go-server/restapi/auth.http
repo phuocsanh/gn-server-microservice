@@ -3,9 +3,9 @@ POST http://localhost:8002/v1/user/register
 Content-Type: application/json
 
 {
-  "verify_key": "phuocsanhtps@gmail.com",
-  "verify_type": 1,
-  "verify_purpose": "TEST_USER"
+  "verifyKey": "phuocsanhtps@gmail.com",
+  "verifyType": 1,
+  "verifyPurpose": "TEST_USER"
 }
 
 ### Thiết lập biến mặc định
@@ -20,8 +20,8 @@ POST http://localhost:8002/v1/user/verify-otp
 Content-Type: application/json
 
 {
-  "verify_key": "phuocsanhtps@gmail.com",
-  "verify_code": "123456"
+  "verifyKey": "phuocsanhtps@gmail.com",
+  "verifyCode": "123456"
 }
 
 > {%
@@ -30,12 +30,13 @@ Content-Type: application/json
 
 ### Update password after registration
 # This request uses the verify_token from the previous verify OTP response
+# @name updatePassword
 POST http://localhost:8002/v1/user/update-pass-register
 Content-Type: application/json
 
 {
-  "user_token": "{{verify_token}}",
-  "user_password": "Password123!"
+  "userToken": "{{verify_token}}",
+  "userPassword": "Password123!"
 }
 
 ### Login with the new account
@@ -44,8 +45,8 @@ POST http://localhost:8002/v1/user/login
 Content-Type: application/json
 
 {
-  "user_account": "phuocsanhtps@gmail.com",
-  "user_password": "12345678"
+  "userAccount": "phuocsanhtps@gmail.com",
+  "userPassword": "12345678"
 }
 
 > {%
@@ -58,7 +59,7 @@ POST http://localhost:8002/v1/user/refresh-token
 Content-Type: application/json
 
 {
-  "refresh_token": "{{refresh_token}}"
+  "refreshToken": "{{refresh_token}}"
 }
 
 > {%
@@ -78,9 +79,9 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "user_id": 1,
-  "two_factor_auth_type": "EMAIL",
-  "two_factor_email": "test@example.com"
+  "userId": 1,
+  "twoFactorAuthType": "EMAIL",
+  "twoFactorEmail": "test@example.com"
 }
 
 ### Verify two-factor authentication
@@ -89,6 +90,6 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "user_id": 1,
-  "two_factor_code": "123456"
+  "userId": 1,
+  "twoFactorCode": "123456"
 }
