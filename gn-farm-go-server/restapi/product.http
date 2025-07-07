@@ -177,17 +177,17 @@ Authorization: Bearer {{access_token}}
 ### ===== PRODUCT TYPE MANAGEMENT =====
 
 ### Create Product Type
-POST http://localhost:8002/v1/admin/product/type
+POST http://localhost:8002/v1/manage/product/type
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "name": "Rau củ quả",
-  "description": "Các loại rau củ quả tươi sạch"
+  "name": "Nấm",
+  "description": "Các loại nấm"
 }
 
 ### Update Product Type
-PUT http://localhost:8002/v1/admin/product/type/1
+PUT http://localhost:8002/v1/manage/product/type/1
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
@@ -197,24 +197,24 @@ Authorization: Bearer {{access_token}}
 }
 
 ### Delete Product Type
-DELETE http://localhost:8002/v1/admin/product/type/1
+DELETE http://localhost:8002/v1/manage/product/type/1
 Authorization: Bearer {{access_token}}
 
 ### ===== PRODUCT SUBTYPE MANAGEMENT =====
 
 ### Create Product Subtype
-POST http://localhost:8002/v1/admin/product/subtype
+POST http://localhost:8002/v1/manage/product/subtype
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 {
-  "name": "Rau xanh",
-  "description": "Các loại rau xanh",
-  "productType": 1
+  "name": "Phân bón lá",
+  "description": "Phân bón hữu cơ",
+  "productType": 3
 }
 
 ### Update Product Subtype
-PUT http://localhost:8002/v1/admin/product/subtype/1
+PUT http://localhost:8002/v1/manage/product/subtype/1
 Content-Type: application/json
 Authorization: Bearer {{access_token}}
 

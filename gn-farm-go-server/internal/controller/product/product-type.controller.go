@@ -1,6 +1,8 @@
 package product
 
 import (
+	"strconv"
+
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/vo/product"
 	"gn-farm-go-server/pkg/response"
@@ -184,14 +186,16 @@ func (c *productSubtypeController) CreateProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	productSubtype, err := service.ProductSubtype.CreateProductSubtype(ctx, req.Name, req.Description)
+	// Gọi service để tạo product subtype
+	subtype, err := service.ProductSubtype.CreateProductSubtype(ctx, req.Name, req.Description)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
-	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
+	// Chuyển đổi sang response object
+	responseData := product.ToProductSubtypeResponse(*subtype)
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, responseData)
 }
 
 // GetProductSubtype retrieves a product subtype by ID
@@ -215,14 +219,16 @@ func (c *productSubtypeController) GetProductSubtype(ctx *gin.Context) {
 		return
 	}
 
-	productSubtype, err := service.ProductSubtype.GetProductSubtype(ctx, params.ID)
+	// Gọi service để lấy product subtype
+	subtype, err := service.ProductSubtype.GetProductSubtype(ctx, params.ID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeNotFound, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
-	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
+	// Chuyển đổi sang response object
+	responseData := product.ToProductSubtypeResponse(*subtype)
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, responseData)
 }
 
 // ListProductSubtypes retrieves a list of product subtypes
@@ -235,14 +241,16 @@ func (c *productSubtypeController) GetProductSubtype(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/subtype [get]
 func (c *productSubtypeController) ListProductSubtypes(ctx *gin.Context) {
-	productSubtypes, err := service.ProductSubtype.ListProductSubtypes(ctx)
+	// Gọi service để lấy danh sách product subtypes
+	subtypes, err := service.ProductSubtype.ListProductSubtypes(ctx)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
-	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, productSubtypes)
+	// Chuyển đổi sang response object
+	responseData := product.ToProductSubtypeResponses(subtypes)
+	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, responseData)
 }
 
 // ListProductSubtypesByType retrieves a list of product subtypes by product type ID
@@ -265,14 +273,16 @@ func (c *productSubtypeController) ListProductSubtypesByType(ctx *gin.Context) {
 		return
 	}
 
-	productSubtypes, err := service.ProductSubtype.ListProductSubtypesByType(ctx, params.TypeID)
+	// Gọi service để lấy danh sách product subtypes
+	subtypes, err := service.ProductSubtype.ListProductSubtypesByType(ctx, params.TypeID)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
-	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, productSubtypes)
+	// Chuyển đổi sang response object
+	responseData := product.ToProductSubtypeResponses(subtypes)
+	response.SuccessResponseWithItems(ctx, response.ErrCodeSuccess, responseData)
 }
 
 // UpdateProductSubtype updates an existing product subtype
@@ -289,28 +299,29 @@ func (c *productSubtypeController) ListProductSubtypesByType(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/subtype/{id} [put]
 func (c *productSubtypeController) UpdateProductSubtype(ctx *gin.Context) {
+	// Lấy ID từ URL
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, "Invalid product subtype ID")
+		return
+	}
+
 	var req product.ProductSubtypeRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	var params struct {
-		ID int32 `uri:"id" binding:"required"`
-	}
-	if err := ctx.ShouldBindUri(&params); err != nil {
-		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
-		return
-	}
-
-	productSubtype, err := service.ProductSubtype.UpdateProductSubtype(ctx, params.ID, req.Name, req.Description)
+	// Gọi service để cập nhật product subtype
+	subtype, err := service.ProductSubtype.UpdateProductSubtype(ctx, int32(id), req.Name, req.Description)
 	if err != nil {
 		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
-	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, productSubtype)
+	// Chuyển đổi sang response object
+	responseData := product.ToProductSubtypeResponse(*subtype)
+	response.SuccessResponseWithItem(ctx, response.ErrCodeSuccess, responseData)
 }
 
 // DeleteProductSubtype deletes a product subtype

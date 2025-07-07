@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"time"
 
 	"gn-farm-go-server/internal/database"
@@ -15,14 +16,24 @@ import (
 )
 
 type ProductData struct {
-	Name        string
-	Type        int32
-	SubTypes    []int32
-	Price       string
-	Discount    string
-	Description string
-	Pictures    []string
-	Attributes  map[string]interface{}
+	Name                string                 `json:"product_name"`
+	Price               string                 `json:"product_price"`
+	Thumbnail           string                 `json:"product_thumb"`
+	Pictures           []string               `json:"product_pictures"`
+	Videos             []string               `json:"product_videos"`
+	Description        string                 `json:"product_description"`
+	Slug               string                 `json:"product_slug"`
+	Type               int32                  `json:"product_type"`
+	SubTypes          []int32                `json:"sub_product_type"`
+	Discount          string                 `json:"discount"`
+	DiscountedPrice   string                 `json:"product_discounted_price"`
+	Status            int32                  `json:"product_status"`
+	Quantity          int32                  `json:"product_quantity"`
+	RatingsAverage    float64                `json:"product_ratings_average"`
+	Attributes        map[string]interface{} `json:"product_attributes"`
+	Variations        map[string]interface{} `json:"product_variations"`
+	IsDraft           bool                   `json:"is_draft"`
+	IsPublished       bool                   `json:"is_published"`
 }
 
 func main() {
@@ -60,23 +71,33 @@ func seedProducts(ctx context.Context, queries *database.Queries) error {
 			return fmt.Errorf("failed to marshal attributes for product %d: %v", i, err)
 		}
 
+		// Convert variations to JSON (not used in current implementation)
+
+		// Generate slug from name if not provided
+		slug := product.Slug
+		if slug == "" {
+			slug = strings.ToLower(strings.ReplaceAll(product.Name, " ", "-"))
+		}
+
 		// Create product
 		params := database.CreateProductParams{
 			ProductName:            product.Name,
 			ProductPrice:           product.Price,
-			ProductThumb:           product.Pictures[0], // First image as thumbnail
+			ProductThumb:           product.Thumbnail,
 			ProductPictures:        product.Pictures,
-			ProductVideos:          []string{},
+			ProductVideos:          product.Videos,
+			ProductDescription:     sql.NullString{String: product.Description, Valid: product.Description != ""},
+			ProductSlug:            sql.NullString{String: slug, Valid: true},
 			ProductType:            product.Type,
 			SubProductType:         product.SubTypes,
 			ProductDiscountedPrice: calculateDiscountedPrice(product.Price, product.Discount),
+			ProductQuantity:        sql.NullInt32{Int32: product.Quantity, Valid: true},
+			ProductStatus:          sql.NullInt32{Int32: product.Status, Valid: true},
+			ProductRatingsAverage:  sql.NullString{String: fmt.Sprintf("%.1f", product.RatingsAverage), Valid: true},
 			ProductAttributes:      attributesJSON,
-			ProductDescription:     sql.NullString{String: product.Description, Valid: true},
-			Discount:               sql.NullString{String: product.Discount, Valid: true},
-			ProductQuantity:        sql.NullInt32{Int32: int32(rand.Intn(100) + 10), Valid: true}, // 10-109
-			ProductStatus:          sql.NullInt32{Int32: 1, Valid: true}, // Active
-			IsPublished:            sql.NullBool{Bool: true, Valid: true},
-			IsDraft:                sql.NullBool{Bool: false, Valid: true},
+			Discount:               sql.NullString{String: product.Discount, Valid: product.Discount != ""},
+			IsDraft:                sql.NullBool{Bool: product.IsDraft, Valid: true},
+			IsPublished:            sql.NullBool{Bool: product.IsPublished, Valid: true},
 		}
 
 		_, err = queries.CreateProduct(ctx, params)
@@ -97,122 +118,145 @@ func calculateDiscountedPrice(price, discount string) string {
 	return price // For now, just return original price
 }
 
+func generateSlug(name string) string {
+	return strings.ToLower(strings.ReplaceAll(name, " ", "-"))
+}
+
 func generateProductData() []ProductData {
 	var products []ProductData
 
-	// Generate 70 Mushroom products (Type 1)
+	// 1. Sản phẩm Nấm (40 sản phẩm)
 	mushroomNames := []string{
-		"Nấm Shiitake Tươi", "Nấm Đùi Gà Hữu Cơ", "Nấm Kim Châm", "Nấm Bào Ngư", "Nấm Mỡ",
-		"Nấm Rơm Tươi", "Nấm Hương Khô", "Nấm Linh Chi", "Nấm Đông Cô", "Nấm Tuyết",
-		"Nấm Bạch Linh", "Nấm Mèo", "Nấm Sò", "Nấm Dẻ Cười", "Nấm Matsutake",
+		"Nấm Rơm Tươi", "Nấm Bào Ngư Trắng", "Nấm Kim Châm", "Nấm Đông Cô", "Nấm Mỡ",
+		"Nấm Hương Tươi", "Nấm Đùi Gà", "Nấm Linh Chi", "Nấm Mối", "Nấm Mèo",
 	}
 	mushroomImages := []string{
 		"https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500",
 		"https://images.unsplash.com/photo-1518864677427-aca22d1e7e4e?w=500",
 		"https://images.unsplash.com/photo-1506976785307-8732e854ad03?w=500",
-		"https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500",
-		"https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=500",
-		"https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500",
 	}
 
-	for i := 0; i < 70; i++ {
+	for i := 0; i < 40; i++ {
 		name := mushroomNames[i%len(mushroomNames)]
 		if i >= len(mushroomNames) {
 			name = fmt.Sprintf("%s %d", name, i/len(mushroomNames)+1)
 		}
 
+		price := 30000 + rand.Intn(100000) // 30k-130k
+		discount := rand.Intn(30)             // 0-30% giảm giá
+		discountedPrice := int(float64(price) * (1 - float64(discount)/100))
+		
 		products = append(products, ProductData{
-			Name: name, Type: 1, SubTypes: []int32{int32((i % 3) + 1)},
-			Price: fmt.Sprintf("%d", 25000+rand.Intn(50000)),
-			Discount: fmt.Sprintf("%d", rand.Intn(20)),
-			Description: fmt.Sprintf("Nấm %s tươi ngon, giàu dinh dưỡng, thích hợp cho nhiều món ăn", name),
-			Pictures: []string{
-				mushroomImages[rand.Intn(len(mushroomImages))],
-				mushroomImages[rand.Intn(len(mushroomImages))],
-			},
+			Name:            name,
+			Type:            1, // Loại 1: Nấm
+			SubTypes:        []int32{int32((i % 3) + 1)},
+			Price:           fmt.Sprintf("%.2f", float64(price)),
+			DiscountedPrice: fmt.Sprintf("%.2f", float64(discountedPrice)),
+			Discount:        fmt.Sprintf("%d", discount),
+			Description:     fmt.Sprintf("%s tươi ngon, giàu dinh dưỡng, xuất xứ từ vùng trồng đảm bảo", name),
+			Slug:            generateSlug(name),
+			Thumbnail:       mushroomImages[rand.Intn(len(mushroomImages))],
+			Pictures:        []string{mushroomImages[rand.Intn(len(mushroomImages))]},
+			Videos:          []string{},
+			Status:          1, // 1: Active
+			Quantity:        int32(rand.Intn(100) + 10), // 10-110 sản phẩm
+			RatingsAverage:  4.0 + rand.Float64() * 1.5, // 4.0 - 5.5
+			IsDraft:         false,
+			IsPublished:     true,
 			Attributes: map[string]interface{}{
-				"origin": []string{"Đà Lạt", "Sapa", "Tam Đảo"}[rand.Intn(3)],
-				"weight": fmt.Sprintf("%dg", (rand.Intn(5)+1)*100),
-				"freshness": "Tươi",
+				"origin":      []string{"Đà Lạt", "Sapa", "Tam Đảo"}[rand.Intn(3)],
+				"weight":      fmt.Sprintf("%dg", (rand.Intn(10)+5)*100), // 500g-1500g
+				"freshness":   []string{"Mới thu hoạch", "Bảo quản lạnh"}[rand.Intn(2)],
+				"storage":     "Bảo quản nơi khô ráo, thoáng mát",
+				"expiry":      fmt.Sprintf("%d ngày", rand.Intn(14)+3), // 3-17 ngày
+				"organic":     rand.Intn(2) == 1,
+			},
+			Variations: map[string]interface{}{
+				"sizes": []string{"Nhỏ", "Vừa", "Lớn"},
+				"colors": []string{"Trắng", "Nâu", "Vàng"},
 			},
 		})
 	}
 
-	// Generate 80 Vegetable products (Type 2)
-	vegetableNames := []string{
-		"Cà Chua Cherry", "Rau Muống", "Cải Bó Xôi", "Xà Lách", "Cà Rót",
-		"Ớt Chuông", "Dưa Chuột", "Cà Tím", "Bí Đỏ", "Bí Ngô",
-		"Củ Cải Trắng", "Cà Rót Tím", "Rau Cần Tây", "Rau Thơm", "Húng Quế",
-		"Rau Má", "Rau Dền", "Cải Thảo", "Su Hào", "Bắp Cải",
+	// 2. Sản phẩm Phân bón (30 sản phẩm)
+	fertilizerNames := []string{
+		"Phân Hữu Cơ Vi Sinh", "Phân Trùn Quế", "Phân Gà Xử Lý", "Phân Bò Hoai Mục", "Phân Dơi",
+		"Phân Hữu Cơ Tổng Hợp", "Phân Cá Hữu Cơ", "Phân Bón Lá", "Phân Nở Chậm", "Phân Hữu Cơ Khoáng",
 	}
-	vegetableImages := []string{
-		"https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500",
-		"https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500",
-		"https://images.unsplash.com/photo-1566385101042-1a0aa0c1268c?w=500",
-		"https://images.unsplash.com/photo-1574316071802-0d684efa7bf5?w=500",
-		"https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500",
-		"https://images.unsplash.com/photo-1461354464878-ad92f492a5a0?w=500",
+	fertilizerImages := []string{
+		"https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=500",
+		"https://images.unsplash.com/photo-1586771107445-d3ca888129ce?w=500",
+		"https://images.unsplash.com/photo-1618221195710-fff6df6fc3a7?w=500",
 	}
 
-	for i := 0; i < 80; i++ {
-		name := vegetableNames[i%len(vegetableNames)]
-		if i >= len(vegetableNames) {
-			name = fmt.Sprintf("%s %d", name, i/len(vegetableNames)+1)
+	for i := 0; i < 30; i++ {
+		name := fertilizerNames[i%len(fertilizerNames)]
+		if i >= len(fertilizerNames) {
+			name = fmt.Sprintf("%s %d", name, i/len(fertilizerNames)+1)
 		}
 
 		products = append(products, ProductData{
-			Name: name, Type: 2, SubTypes: []int32{int32((i % 4) + 1)},
-			Price: fmt.Sprintf("%d", 15000+rand.Intn(35000)),
-			Discount: fmt.Sprintf("%d", rand.Intn(15)),
-			Description: fmt.Sprintf("Rau %s tươi sạch, hữu cơ, giàu vitamin và khoáng chất", name),
+			Name: name,
+			Type: 2, // Loại 2: Phân bón
+			SubTypes: []int32{int32((i % 4) + 1)},
+			Price:    fmt.Sprintf("%d", 50000+rand.Intn(200000)), // 50k-250k
+			Discount: fmt.Sprintf("%d", rand.Intn(25)),           // 0-25% giảm giá
+			Description: fmt.Sprintf("%s chất lượng cao, cung cấp dinh dưỡng cân đối cho cây trồng", name),
 			Pictures: []string{
-				vegetableImages[rand.Intn(len(vegetableImages))],
-				vegetableImages[rand.Intn(len(vegetableImages))],
+				fertilizerImages[rand.Intn(len(fertilizerImages))],
 			},
 			Attributes: map[string]interface{}{
-				"origin": []string{"Đà Lạt", "Lâm Đồng", "Hà Nội"}[rand.Intn(3)],
-				"weight": fmt.Sprintf("%dg", (rand.Intn(8)+1)*100),
-				"organic": rand.Intn(2) == 1,
-				"pesticide_free": true,
+				"origin":      []string{"Việt Nam", "Nhật Bản", "Hàn Quốc", "Mỹ"}[rand.Intn(4)],
+				"weight":      fmt.Sprintf("%dkg", (rand.Intn(5)+1)), // 1-5kg
+				"organic":     rand.Intn(2) == 1,
+				"usage":       "Pha loãng với nước tưới quanh gốc cây",
+				"effect_time": fmt.Sprintf("%d tháng", rand.Intn(6)+1), // 1-6 tháng
 			},
 		})
 	}
 
-	// Generate 50 Bonsai products (Type 3)
-	bonsaiNames := []string{
-		"Bonsai Tùng La Hán", "Bonsai Sanh", "Bonsai Sung", "Bonsai Đa", "Bonsai Cẩm Lai",
-		"Bonsai Tùng Thơm", "Bonsai Linh Sam", "Bonsai Duối", "Bonsai Trúc", "Bonsai Tùng Lá Kim",
-		"Bonsai Hoa Giấy", "Bonsai Cúc Tana", "Bonsai Nguyệt Quế", "Bonsai Tùng Bách", "Bonsai Lá Nhỏ",
+	// 3. Sản phẩm Thuốc bảo vệ thực vật (30 sản phẩm)
+	pesticideNames := []string{
+		"Thuốc Trừ Sâu Sinh Học", "Thuốc Diệt Cỏ", "Thuốc Trừ Nấm", "Thuốc Trừ Sâu Hữu Cơ",
+		"Thuốc Diệt Ốc", "Thuốc Kích Thích Sinh Trưởng", "Thuốc Trừ Rầy", "Thuốc Xua Đuổi Côn Trùng",
+		"Thuốc Trừ Bệnh Đạo Ôn", "Thuốc Trừ Sâu Vi Sinh",
 	}
-	bonsaiImages := []string{
-		"https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=500",
-		"https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=500",
-		"https://images.unsplash.com/photo-1463320726281-696a485928c7?w=500",
-		"https://images.unsplash.com/photo-1509423350716-97f2360af03e?w=500",
-		"https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=500",
-		"https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500",
+	pesticideImages := []string{
+		"https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500",
+		"https://images.unsplash.com/photo-1592919505780-998a4a8cef16?w=500",
+		"https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500",
 	}
 
-	for i := 0; i < 50; i++ {
-		name := bonsaiNames[i%len(bonsaiNames)]
-		if i >= len(bonsaiNames) {
-			name = fmt.Sprintf("%s %d", name, i/len(bonsaiNames)+1)
+	pestTypes := []string{"Sâu", "Bệnh", "Cỏ dại", "Chuột", "Ốc bươu vàng"}
+	targetPlants := []string{"Lúa", "Rau màu", "Cây ăn quả", "Hoa cây cảnh", "Cây công nghiệp"}
+
+	for i := 0; i < 30; i++ {
+		name := pesticideNames[i%len(pesticideNames)]
+		if i >= len(pesticideNames) {
+			name = fmt.Sprintf("%s %d", name, i/len(pesticideNames)+1)
 		}
 
+		pestType := pestTypes[rand.Intn(len(pestTypes))]
+		targetPlant := targetPlants[rand.Intn(len(targetPlants))]
+
 		products = append(products, ProductData{
-			Name: name, Type: 3, SubTypes: []int32{int32((i % 2) + 1)},
-			Price: fmt.Sprintf("%d", 150000+rand.Intn(500000)),
-			Discount: fmt.Sprintf("%d", rand.Intn(10)),
-			Description: fmt.Sprintf("Cây %s đẹp, dáng cổ thụ, thích hợp trang trí nội thất", name),
+			Name: name,
+			Type: 3, // Loại 3: Thuốc bảo vệ thực vật
+			SubTypes: []int32{int32((i % 5) + 1)},
+			Price:    fmt.Sprintf("%d", 30000+rand.Intn(200000)), // 30k-230k
+			Discount: fmt.Sprintf("%d", rand.Intn(20)),           // 0-20% giảm giá
+			Description: fmt.Sprintf("%s hiệu quả cao, an toàn cho cây trồng và môi trường", name),
 			Pictures: []string{
-				bonsaiImages[rand.Intn(len(bonsaiImages))],
-				bonsaiImages[rand.Intn(len(bonsaiImages))],
+				pesticideImages[rand.Intn(len(pesticideImages))],
 			},
 			Attributes: map[string]interface{}{
-				"age": fmt.Sprintf("%d năm", rand.Intn(10)+3),
-				"height": fmt.Sprintf("%dcm", rand.Intn(50)+20),
-				"pot_included": true,
-				"care_level": []string{"Dễ", "Trung bình", "Khó"}[rand.Intn(3)],
+				"origin":       []string{"Việt Nam", "Nhật Bản", "Hàn Quốc", "Mỹ", "Thái Lan"}[rand.Intn(5)],
+				"volume":       fmt.Sprintf("%dml", (rand.Intn(10)+1)*100), // 100-1000ml
+				"pest_type":    pestType,
+				"target_plant": targetPlant,
+				"frequency":    fmt.Sprintf("%d lần/vụ", rand.Intn(5)+1), // 1-5 lần/vụ
+				"safety_level": []string{"Độc hại", "Cảnh báo", "Cẩn thận", "An toàn"}[rand.Intn(4)],
+				"expiry_date":  fmt.Sprintf("%d/%d", rand.Intn(12)+1, 2025+rand.Intn(3)), // 1-12/2025-2027
 			},
 		})
 	}
