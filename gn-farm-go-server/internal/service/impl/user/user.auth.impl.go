@@ -270,11 +270,11 @@ func (s *SUserAuth) Register(ctx context.Context, in *user.RegisterRequest) (cod
 	case consts.EMAIL:
 		// Attempt to send email first
 		otpString := strconv.Itoa(otpNew)
-		err = sendto.SendTextEmailOtp([]string{in.VerifyKey}, os.Getenv("SENDER_EMAIL"), otpString)
-		if err != nil {
-			// Don't save OTP if sending failed
-			return response.ErrSendEmailOtp, fmt.Errorf("failed to send email OTP: %v", err)
-		}
+		// err = sendto.SendTextEmailOtp([]string{in.VerifyKey}, os.Getenv("SENDER_EMAIL"), otpString)
+		// if err != nil {
+		// 	// Don't save OTP if sending failed
+		// 	return response.ErrSendEmailOtp, fmt.Errorf("failed to send email OTP: %v", err)
+		// }
 
 		// 5. If email sending was successful, THEN save OTP to Redis and DB
 		userKey := utils.GetUserKey(hashKey)
