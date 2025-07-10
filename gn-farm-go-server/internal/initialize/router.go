@@ -3,8 +3,10 @@ package initialize
 import (
 	"gn-farm-go-server/global"
 	"gn-farm-go-server/internal/controller/health"
+	"gn-farm-go-server/internal/handler/upload"
 	"gn-farm-go-server/internal/middlewares"
 	"gn-farm-go-server/internal/routers"
+	"gn-farm-go-server/internal/service"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -20,6 +22,10 @@ func InitRouter() *gin.Engine {
 		gin.SetMode(gin.ReleaseMode)
 		r = gin.New()
 	}
+
+	// Cấu hình static file
+	r.Static("/uploads", "./uploads")
+	r.MaxMultipartMemory = 8 << 20 // 8 MiB
 	// middlewares
 	r.Use(middlewares.ErrorHandler())
 	r.Use(middlewares.LoggingMiddleware())
@@ -33,33 +39,42 @@ func InitRouter() *gin.Engine {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
 	}))
-	// r.Use() // limiter global
+
+	// Initialize routers
 	manageRouter := routers.RouterGroupApp.Manage
 	userRouterGroup := routers.RouterGroupApp.User
 	productRouterGroup := routers.RouterGroupApp.Product
+
+	// Initialize upload handler
+	uploadHandler := upload.NewUploadHandler(service.Upload())
+	uploadRouter := routers.NewUploadRouter(uploadHandler)
 
 	// Health check endpoints (outside versioned API)
 	r.GET("/health", health.Health.HealthCheck)
 	r.GET("/ready", health.Health.ReadinessCheck)
 	r.GET("/live", health.Health.LivenessCheck)
 
-	MainGroup := r.Group("/v1")
+	// API v1 group
+	v1 := r.Group("/v1")
 	{
-		MainGroup.GET("/checkStatus") // tracking monitor
-	}
-	{
-		userRouterGroup.InitUserRouter(MainGroup)
-	}
-	{
-		productRouterGroup.InitProductRouter(MainGroup)
-	}
-	{
-		manageRouter.InitUserRouter(MainGroup)
-		manageRouter.InitAdminRouter(MainGroup)
-		manageRouter.InitInventoryManageRouter(MainGroup)
-		manageRouter.InitProductManageRouter(MainGroup)
-	}
+		// Health check
+		v1.GET("/checkStatus", health.Health.HealthCheck)
 
+		// User routes
+		userRouterGroup.InitUserRouter(v1)
+
+		// Product routes
+		productRouterGroup.InitProductRouter(v1)
+
+		// Manage routes
+		manageRouter.InitUserRouter(v1)
+		manageRouter.InitAdminRouter(v1)
+		manageRouter.InitInventoryManageRouter(v1)
+		manageRouter.InitProductManageRouter(v1)
+
+		// Upload routes
+		uploadRouter.InitRouter(v1)
+	}
 
 	return r
 }

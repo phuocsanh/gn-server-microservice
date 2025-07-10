@@ -10,46 +10,53 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewRouter() *gin.Engine {
+// Router chứa tất cả các router
+var Router *gin.Engine
+
+// InitRouter khởi tạo tất cả các router
+func InitRouter(
+	pongController *controller.PongController,
+	userRouter *user.UserRouter,
+	productRouter *product.ProductRouter,
+	manageRouterGroup *manage.ManageRouterGroup,
+	uploadRouter *UploadRouter,
+) *gin.Engine {
 	r := gin.Default()
 
 	// Health check route
-	pongController := controller.NewPongController()
 	r.GET("/ping", pongController.Pong)
 
 	// API v1 group
-	v1 := r.Group("/api/v1")
+	v1 := r.Group("/v1")
 	{
 		// Health check route in v1
 		v1.GET("/ping", pongController.Pong)
 
-		// Initialize user routes
-		userRouter := user.UserRouter{}
+		// Khởi tạo các router
 		userRouter.InitUserRouter(v1)
-
-		// Initialize product routes
-		productRouter := product.ProductRouter{}
 		productRouter.InitProductRouter(v1)
-
-		// Initialize manage routes
-		manageRouterGroup := manage.ManageRouterGroup{}
 		
-		// Initialize product manage routes
+		// Khởi tạo manage router
 		manageRouterGroup.ProductManageRouter.InitProductManageRouter(v1)
 
-		// Initialize inventory manage routes with error handling
+		// Khởi tạo inventory router với xử lý lỗi
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					log.Printf("PANIC when initializing inventory router: %v", r)
+					log.Printf("Lỗi khi khởi tạo inventory router: %v", r)
 				}
 			}()
 			
-			log.Println("INIT: About to initialize inventory router...")
+			log.Println("INIT: Đang khởi tạo inventory router...")
 			manageRouterGroup.InventoryManageRouter.InitInventoryManageRouter(v1)
-			log.Println("INIT: Inventory router initialized successfully")
+			log.Println("INIT: Đã khởi tạo inventory router thành công")
 		}()
+
+		// Khởi tạo upload router
+		uploadRouterGroup := UploadRouterGroup
+		uploadRouterGroup.InitUploadRouter(v1)
 	}
 
+	Router = r
 	return r
 }

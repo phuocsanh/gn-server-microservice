@@ -1,8 +1,10 @@
 package initialize
 
 import (
+	"gn-farm-go-server/global"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/wire"
+	"go.uber.org/zap"
 )
 
 // InitServiceInterface initializes all service interfaces
@@ -13,4 +15,12 @@ func InitServiceInterface() {
 		panic(err)
 	}
 	service.InitUserAuth(userAuth)
+	
+	// Initialize upload service
+	uploadService, err := wire.InitUploadService()
+	if err != nil {
+		global.Logger.Error("Failed to initialize upload service", zap.Error(err))
+		panic(err)
+	}
+	service.SetUploadService(uploadService)
 }
