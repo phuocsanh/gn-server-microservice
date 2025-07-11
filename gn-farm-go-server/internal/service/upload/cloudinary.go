@@ -1,12 +1,15 @@
 package upload
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/cloudinary/cloudinary-go/v2"
@@ -61,10 +64,13 @@ func (s *CloudinaryService) UploadFile(ctx context.Context, file []byte, filenam
 	ext := filepath.Ext(filename)
 	publicID := filename[:len(filename)-len(ext)]
 
+	// Tạo một reader từ byte slice
+	reader := bytes.NewReader(file)
+
 	// Upload lên Cloudinary với tag tạm thời
 	result, err := s.cld.Upload.Upload(
 		ctx,
-		file,
+		reader,
 		uploader.UploadParams{
 			Folder:   folder,
 			PublicID: publicID,
@@ -100,6 +106,45 @@ func (s *CloudinaryService) UpdateTags(ctx context.Context, publicID string, tag
 
 	if err != nil {
 		return fmt.Errorf("failed to update tags: %v", err)
+	}
+
+	return nil
+}
+
+// ExtractPublicIDFromURL trích xuất public_id từ URL Cloudinary
+func (s *CloudinaryService) ExtractPublicIDFromURL(url string) (string, error) {
+	// Mẫu URL Cloudinary: https://res.cloudinary.com/<cloud_name>/<resource_type>/upload/v<version>/<public_id>.<extension>
+	re := regexp.MustCompile(`/upload/(?:[^/]+/)*([^/.]+)(?:\.[^/]+)?$`)
+	matches := re.FindStringSubmatch(url)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("invalid Cloudinary URL")
+	}
+	
+	// Loại bỏ các tham số nếu có
+	publicID := strings.Split(matches[1], "?")[0]
+	return publicID, nil
+}
+
+// MarkFileAsUsed đánh dấu file đã sử dụng bằng cách đổi tag từ "temporary" sang "in_use"
+func (s *CloudinaryService) MarkFileAsUsed(ctx context.Context, imageURL string) error {
+	if imageURL == "" {
+		return nil // Không có ảnh
+	}
+
+	// Trích xuất public_id từ URL
+	publicID, err := s.ExtractPublicIDFromURL(imageURL)
+	if err != nil {
+		return fmt.Errorf("invalid image URL: %v", err)
+	}
+
+	// Cập nhật tag
+	_, err = s.cld.Admin.UpdateAsset(ctx, admin.UpdateAssetParams{
+		PublicID: publicID,
+		Tags:     []string{"in_use"},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to mark file as used: %v", err)
 	}
 
 	return nil

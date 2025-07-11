@@ -20,6 +20,9 @@ type UploadService interface {
 	// UpdateTags updates tags of a file
 	UpdateTags(ctx context.Context, publicID string, tags []string) error
 	
+	// MarkFileAsUsed marks a file as used by updating its tags
+	MarkFileAsUsed(ctx context.Context, imageURL string) error
+	
 	// CleanupUnusedFiles removes temporary files older than specified days
 	CleanupUnusedFiles(ctx context.Context, daysOld int) error
 }

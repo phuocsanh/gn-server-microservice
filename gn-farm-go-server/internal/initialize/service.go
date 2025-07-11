@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"gn-farm-go-server/global"
+	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/wire"
 	"go.uber.org/zap"
@@ -23,4 +24,13 @@ func InitServiceInterface() {
 		panic(err)
 	}
 	service.SetUploadService(uploadService)
+
+	// Initialize file tracking service
+	db := database.New(global.Pgdbc)
+	fileTrackingService, err := wire.InitFileTrackingService(db)
+	if err != nil {
+		global.Logger.Error("Failed to initialize file tracking service", zap.Error(err))
+		panic(err)
+	}
+	service.SetFileTrackingService(fileTrackingService)
 }

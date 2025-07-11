@@ -33,6 +33,69 @@ type ChatParticipant struct {
 	LeftAt         sql.NullTime   `json:"leftAt"`
 }
 
+type FileAuditLog struct {
+	ID                int32                 `json:"id"`
+	FileID            sql.NullInt32         `json:"fileId"`
+	Action            string                `json:"action"`
+	EntityType        sql.NullString        `json:"entityType"`
+	EntityID          sql.NullInt32         `json:"entityId"`
+	OldReferenceCount sql.NullInt32         `json:"oldReferenceCount"`
+	NewReferenceCount sql.NullInt32         `json:"newReferenceCount"`
+	Details           pqtype.NullRawMessage `json:"details"`
+	PerformedByUserID sql.NullInt32         `json:"performedByUserId"`
+	PerformedAt       sql.NullTime          `json:"performedAt"`
+	IpAddress         pqtype.Inet           `json:"ipAddress"`
+	UserAgent         sql.NullString        `json:"userAgent"`
+}
+
+type FileCleanupJob struct {
+	ID             int32                 `json:"id"`
+	JobType        string                `json:"jobType"`
+	Status         sql.NullString        `json:"status"`
+	Parameters     pqtype.NullRawMessage `json:"parameters"`
+	FilesProcessed sql.NullInt32         `json:"filesProcessed"`
+	FilesDeleted   sql.NullInt32         `json:"filesDeleted"`
+	FilesFailed    sql.NullInt32         `json:"filesFailed"`
+	ErrorMessage   sql.NullString        `json:"errorMessage"`
+	StartedAt      sql.NullTime          `json:"startedAt"`
+	CompletedAt    sql.NullTime          `json:"completedAt"`
+	CreatedAt      sql.NullTime          `json:"createdAt"`
+}
+
+type FileReference struct {
+	ID              int32          `json:"id"`
+	FileID          int32          `json:"fileId"`
+	EntityType      string         `json:"entityType"`
+	EntityID        int32          `json:"entityId"`
+	FieldName       sql.NullString `json:"fieldName"`
+	ReferenceType   sql.NullString `json:"referenceType"`
+	CreatedAt       sql.NullTime   `json:"createdAt"`
+	CreatedByUserID sql.NullInt32  `json:"createdByUserId"`
+	DeletedAt       sql.NullTime   `json:"deletedAt"`
+	DeletedByUserID sql.NullInt32  `json:"deletedByUserId"`
+}
+
+type FileUpload struct {
+	ID                  int32                 `json:"id"`
+	PublicID            string                `json:"publicId"`
+	FileUrl             string                `json:"fileUrl"`
+	FileName            string                `json:"fileName"`
+	FileType            string                `json:"fileType"`
+	FileSize            int64                 `json:"fileSize"`
+	Folder              sql.NullString        `json:"folder"`
+	MimeType            sql.NullString        `json:"mimeType"`
+	ReferenceCount      sql.NullInt32         `json:"referenceCount"`
+	IsTemporary         sql.NullBool          `json:"isTemporary"`
+	IsOrphaned          sql.NullBool          `json:"isOrphaned"`
+	UploadedByUserID    sql.NullInt32         `json:"uploadedByUserId"`
+	Tags                []string              `json:"tags"`
+	Metadata            pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt           sql.NullTime          `json:"createdAt"`
+	UpdatedAt           sql.NullTime          `json:"updatedAt"`
+	MarkedForDeletionAt sql.NullTime          `json:"markedForDeletionAt"`
+	DeletedAt           sql.NullTime          `json:"deletedAt"`
+}
+
 type InventoryHistory struct {
 	ID              int32          `json:"id"`
 	ProductID       int32          `json:"productId"`

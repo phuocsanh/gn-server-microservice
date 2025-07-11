@@ -24,11 +24,5 @@ func InitUploadService() (upload.UploadService, error) {
 		return nil, err
 	}
 
-	// Khởi tạo scheduler để dọn dẹp file tạm
-	// Chạy vào 2h sáng hàng ngày
-	// go func() {
-	//     upload.StartCleanupScheduler(cloudinaryService)
-	// }()
-
 	return cloudinaryService, nil
 }

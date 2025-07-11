@@ -5,12 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"path/filepath"
 	"strconv"
+	"strings"
 
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/model"
 	productModel "gn-farm-go-server/internal/model/product"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/file_tracking"
 	productVO "gn-farm-go-server/internal/vo/product"
 	"gn-farm-go-server/pkg/response"
 
@@ -273,12 +277,10 @@ func NewProductServiceImpl(db *database.Queries) service.IProductService {
 	// Register product types
 	ps.registerProductType(service.ProductTypeMushroom, createMushroomProduct)
 	ps.registerProductType(service.ProductTypeVegetable, createVegetableProduct)
-	ps.registerProductType(service.ProductTypeBonsai, createBonsaiProduct)
 
 	return &productServiceWrapper{ps: ps}
 }
 
-// Implement IProductService interface methods
 func (w *productServiceWrapper) CreateProduct(ctx context.Context, in *productVO.CreateProductRequest) (codeResult int, out productVO.ProductResponse, err error) {
 	// Convert CreateProductRequest to database.CreateProductParams
 	params := database.CreateProductParams{
@@ -313,6 +315,22 @@ func (w *productServiceWrapper) CreateProduct(ctx context.Context, in *productVO
 	product, err := w.ps.CreateProduct(ctx, &params)
 	if err != nil {
 		return response.ErrCodeInternalServerError, out, err
+	}
+
+	// Thêm file references cho ProductThumb
+	if in.ProductThumb != "" {
+		if trackErr := w.addFileReference(ctx, in.ProductThumb, product.ID, "product_thumb"); trackErr != nil {
+			log.Printf("Warning: Failed to add file reference for product thumb: %v", trackErr)
+		}
+	}
+
+	// Thêm file references cho ProductPictures
+	for _, pictureURL := range in.ProductPictures {
+		if pictureURL != "" {
+			if trackErr := w.addFileReference(ctx, pictureURL, product.ID, "product_pictures"); trackErr != nil {
+				log.Printf("Warning: Failed to add file reference for product picture: %v", trackErr)
+			}
+		}
 	}
 
 	// Convert database.Product to ProductResponse using converter functions
@@ -768,13 +786,146 @@ func convertSqlNullInt32ToNull(sqlNull sql.NullInt32) null.Int {
 }
 
 func convertSqlNullBoolToNull(sqlNull sql.NullBool) null.Bool {
-	if sqlNull.Valid {
-		return null.BoolFrom(sqlNull.Bool)
+	if !sqlNull.Valid {
+		return null.NewBool(false, false)
 	}
-	return null.Bool{}
+	return null.NewBool(sqlNull.Bool, true)
 }
 
-// registerProductType registers a product creator function for a specific product type
+// addFileReference thêm file reference cho một file cụ thể
+func (w *productServiceWrapper) addFileReference(ctx context.Context, imageURL string, productID int32, fieldName string) error {
+	fileTrackingSvc := service.FileTracking()
+	if fileTrackingSvc == nil {
+		return fmt.Errorf("file tracking service not initialized")
+	}
+
+	// Extract public ID from URL
+	publicID := extractPublicIDFromURL(imageURL)
+	if publicID == "" {
+		return fmt.Errorf("could not extract public ID from URL: %s", imageURL)
+	}
+
+	// Get file upload record by public ID
+	fileUpload, err := fileTrackingSvc.GetFileUploadByPublicID(ctx, publicID)
+	if err != nil {
+		return fmt.Errorf("failed to get file upload for publicID %s: %w", publicID, err)
+	}
+
+	// Add file reference
+	params := file_tracking.AddFileReferenceParams{
+		FileID:           fileUpload.ID,
+		EntityType:       "product",
+		EntityID:         productID,
+		FieldName:        &fieldName,
+		ReferenceType:    "direct",
+		CreatedByUserID:  nil, // TODO: Get from context if available
+	}
+
+	if err := fileTrackingSvc.AddFileReference(ctx, params); err != nil {
+		return fmt.Errorf("failed to add file reference for publicID %s: %w", publicID, err)
+	}
+
+	return nil
+}
+
+// extractPublicIDFromURL extracts public ID from Cloudinary URL
+func extractPublicIDFromURL(url string) string {
+	if url == "" {
+		return ""
+	}
+
+	// Handle Cloudinary URLs
+	if strings.Contains(url, "cloudinary.com") {
+		// Extract public ID from Cloudinary URL
+		// Example: https://res.cloudinary.com/demo/image/upload/v1234567890/sample.jpg
+		parts := strings.Split(url, "/")
+		for i, part := range parts {
+			if part == "upload" && i+1 < len(parts) {
+				// Skip version if present (starts with 'v')
+				nextPart := parts[i+1]
+				if strings.HasPrefix(nextPart, "v") && i+2 < len(parts) {
+					// Remove file extension
+					fileName := parts[i+2]
+					return strings.TrimSuffix(fileName, filepath.Ext(fileName))
+				} else {
+					// No version, extract directly
+					fileName := nextPart
+					return strings.TrimSuffix(fileName, filepath.Ext(fileName))
+				}
+			}
+		}
+	}
+
+	// For other URLs, try to extract filename without extension
+	parts := strings.Split(url, "/")
+	if len(parts) > 0 {
+		lastPart := parts[len(parts)-1]
+		// Remove query parameters
+		if idx := strings.Index(lastPart, "?"); idx != -1 {
+			lastPart = lastPart[:idx]
+		}
+		return strings.TrimSuffix(lastPart, filepath.Ext(lastPart))
+	}
+
+	return ""
+}
+
+// addFileReferences thêm file references cho nhiều files (deprecated, kept for compatibility)
+func (w *productServiceWrapper) addFileReferences(ctx context.Context, imageURLs []string, productID int32) error {
+	for i, imageURL := range imageURLs {
+		if imageURL == "" {
+			continue
+		}
+
+		// Determine field name based on image position
+		fieldName := "product_pictures"
+		if i == 0 && len(imageURLs) > 1 {
+			// First image might be thumbnail if there are multiple images
+			fieldName = "product_thumb"
+		}
+
+		if err := w.addFileReference(ctx, imageURL, productID, fieldName); err != nil {
+			log.Printf("Failed to add file reference for URL %s: %v", imageURL, err)
+			// Continue with other files even if one fails
+		}
+	}
+
+	return nil
+}
+
+// MarkImagesAsUsed - deprecated, kept for backward compatibility
+func (w *productServiceWrapper) MarkImagesAsUsed(ctx context.Context, imageURLs ...string) error {
+	if len(imageURLs) == 0 {
+		return nil
+	}
+
+	// Lấy upload service từ service package
+	uploadSvc := service.Upload()
+	if uploadSvc == nil {
+		return fmt.Errorf("upload service is not initialized")
+	}
+
+	var errs []error
+
+	// Đánh dấu từng ảnh đã sử dụng
+	for _, url := range imageURLs {
+		if url == "" {
+			continue
+		}
+
+		// Gọi phương thức MarkFileAsUsed từ upload service
+		if err := uploadSvc.MarkFileAsUsed(ctx, url); err != nil {
+			errs = append(errs, fmt.Errorf("failed to mark image as used (%s): %v", url, err))
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to mark some images as used: %v", errs)
+	}
+
+	return nil
+}
+
 func (s *productService) registerProductType(productType int32, creator productCreator) {
 	s.productRegistry[productType] = creator
 }
