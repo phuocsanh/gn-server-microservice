@@ -265,6 +265,7 @@ func createBonsaiProduct(ctx context.Context, db *database.Queries, params inter
 // productServiceWrapper wraps productService to implement IProductService interface
 type productServiceWrapper struct {
 	ps *productService
+	fileTrackingService file_tracking.FileTrackingService
 }
 
 // NewProductServiceImpl creates a new product service implementation for IProductService interface
@@ -279,6 +280,24 @@ func NewProductServiceImpl(db *database.Queries) service.IProductService {
 	ps.registerProductType(service.ProductTypeVegetable, createVegetableProduct)
 
 	return &productServiceWrapper{ps: ps}
+}
+
+// NewProductServiceImplWithFileTracking creates a new product service implementation with file tracking
+func NewProductServiceImplWithFileTracking(db *database.Queries, fileTrackingService file_tracking.FileTrackingService) service.IProductService {
+	ps := &productService{
+		db:              db,
+		productRegistry: make(map[int32]productCreator),
+	}
+
+	// Register product types
+	ps.registerProductType(service.ProductTypeMushroom, createMushroomProduct)
+	ps.registerProductType(service.ProductTypeVegetable, createVegetableProduct)
+	ps.registerProductType(service.ProductTypeBonsai, createBonsaiProduct)
+
+	return &productServiceWrapper{
+		ps: ps,
+		fileTrackingService: fileTrackingService,
+	}
 }
 
 func (w *productServiceWrapper) CreateProduct(ctx context.Context, in *productVO.CreateProductRequest) (codeResult int, out productVO.ProductResponse, err error) {
@@ -317,21 +336,8 @@ func (w *productServiceWrapper) CreateProduct(ctx context.Context, in *productVO
 		return response.ErrCodeInternalServerError, out, err
 	}
 
-	// Thêm file references cho ProductThumb
-	if in.ProductThumb != "" {
-		if trackErr := w.addFileReference(ctx, in.ProductThumb, product.ID, "product_thumb"); trackErr != nil {
-			log.Printf("Warning: Failed to add file reference for product thumb: %v", trackErr)
-		}
-	}
-
-	// Thêm file references cho ProductPictures
-	for _, pictureURL := range in.ProductPictures {
-		if pictureURL != "" {
-			if trackErr := w.addFileReference(ctx, pictureURL, product.ID, "product_pictures"); trackErr != nil {
-				log.Printf("Warning: Failed to add file reference for product picture: %v", trackErr)
-			}
-		}
-	}
+	// Thêm file references sử dụng helper function
+	w.trackEntityFiles(ctx, product.ID, "product", in.ProductThumb, in.ProductPictures)
 
 	// Convert database.Product to ProductResponse using converter functions
 	var productVariations json.RawMessage
@@ -557,6 +563,15 @@ func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in 
 		return response.ErrCodeInternalServerError, out, err
 	}
 
+	// Update file tracking nếu có thay đổi về files
+	if in.ProductThumb != nil || in.ProductPictures != nil {
+		oldThumb := existingProduct.ProductThumb
+		newThumb := params.ProductThumb
+		oldPictures := existingProduct.ProductPictures
+		newPictures := params.ProductPictures
+		w.updateEntityFileTracking(ctx, id, "product", oldThumb, newThumb, oldPictures, newPictures)
+	}
+
 	// Convert database.Product to ProductResponse using converter functions
 	var productVariations json.RawMessage
 	if product.ProductVariations.Valid {
@@ -592,6 +607,9 @@ func (w *productServiceWrapper) UpdateProduct(ctx context.Context, id int32, in 
 }
 
 func (w *productServiceWrapper) DeleteProduct(ctx context.Context, id int32) (codeResult int, err error) {
+	// Remove file references trước khi xóa sản phẩm
+	w.removeEntityFileReferences(ctx, id)
+
 	// Gọi hàm DeleteProduct của lớp productService
 	err = w.ps.DeleteProduct(ctx, id)
 	if err != nil {
@@ -794,8 +812,7 @@ func convertSqlNullBoolToNull(sqlNull sql.NullBool) null.Bool {
 
 // addFileReference thêm file reference cho một file cụ thể
 func (w *productServiceWrapper) addFileReference(ctx context.Context, imageURL string, productID int32, fieldName string) error {
-	fileTrackingSvc := service.FileTracking()
-	if fileTrackingSvc == nil {
+	if w.fileTrackingService == nil {
 		return fmt.Errorf("file tracking service not initialized")
 	}
 
@@ -806,7 +823,7 @@ func (w *productServiceWrapper) addFileReference(ctx context.Context, imageURL s
 	}
 
 	// Get file upload record by public ID
-	fileUpload, err := fileTrackingSvc.GetFileUploadByPublicID(ctx, publicID)
+	fileUpload, err := w.fileTrackingService.GetFileUploadByPublicID(ctx, publicID)
 	if err != nil {
 		return fmt.Errorf("failed to get file upload for publicID %s: %w", publicID, err)
 	}
@@ -821,11 +838,124 @@ func (w *productServiceWrapper) addFileReference(ctx context.Context, imageURL s
 		CreatedByUserID:  nil, // TODO: Get from context if available
 	}
 
-	if err := fileTrackingSvc.AddFileReference(ctx, params); err != nil {
+	if err := w.fileTrackingService.AddFileReference(ctx, params); err != nil {
 		return fmt.Errorf("failed to add file reference for publicID %s: %w", publicID, err)
 	}
 
 	return nil
+}
+
+// Helper function để track files cho một entity
+func (w *productServiceWrapper) trackEntityFiles(ctx context.Context, entityID int32, entityType string, thumbURL string, pictureURLs []string) {
+	// Track thumb
+	if thumbURL != "" {
+		if err := w.addFileReference(ctx, thumbURL, entityID, entityType+"_thumb"); err != nil {
+			log.Printf("Warning: Failed to add file reference for %s thumb: %v", entityType, err)
+		}
+	}
+	
+	// Track pictures
+	for _, pictureURL := range pictureURLs {
+		if pictureURL != "" {
+			if err := w.addFileReference(ctx, pictureURL, entityID, entityType+"_pictures"); err != nil {
+				log.Printf("Warning: Failed to add file reference for %s picture: %v", entityType, err)
+			}
+		}
+	}
+}
+
+// Helper function để remove file tracking cho một entity
+func (w *productServiceWrapper) removeEntityFileReferences(ctx context.Context, entityID int32) {
+	if w.fileTrackingService == nil {
+		log.Printf("Warning: File tracking service not initialized")
+		return
+	}
+
+	if err := w.fileTrackingService.BatchRemoveReferences(ctx, "product", entityID); err != nil {
+		log.Printf("Warning: Failed to remove file references for entity %d: %v", entityID, err)
+	}
+}
+
+// Helper function để update file tracking khi files thay đổi
+func (w *productServiceWrapper) updateEntityFileTracking(ctx context.Context, entityID int32, entityType string, oldThumb, newThumb string, oldPictures, newPictures []string) {
+	// Nếu thumb thay đổi
+	if oldThumb != newThumb {
+		// Remove old thumb reference nếu có
+		if oldThumb != "" {
+			w.removeSpecificFileReference(ctx, entityID, oldThumb)
+		}
+		// Add new thumb reference nếu có
+		if newThumb != "" {
+			if err := w.addFileReference(ctx, newThumb, entityID, entityType+"_thumb"); err != nil {
+				log.Printf("Warning: Failed to add file reference for new %s thumb: %v", entityType, err)
+			}
+		}
+	}
+
+	// Nếu pictures thay đổi
+	if !stringSlicesEqual(oldPictures, newPictures) {
+		// Remove old picture references
+		for _, oldPicture := range oldPictures {
+			if oldPicture != "" && !stringSliceContains(newPictures, oldPicture) {
+				w.removeSpecificFileReference(ctx, entityID, oldPicture)
+			}
+		}
+		// Add new picture references
+		for _, newPicture := range newPictures {
+			if newPicture != "" && !stringSliceContains(oldPictures, newPicture) {
+				if err := w.addFileReference(ctx, newPicture, entityID, entityType+"_pictures"); err != nil {
+					log.Printf("Warning: Failed to add file reference for new %s picture: %v", entityType, err)
+				}
+			}
+		}
+	}
+}
+
+// Helper function để remove specific file reference
+func (w *productServiceWrapper) removeSpecificFileReference(ctx context.Context, entityID int32, imageURL string) {
+	if w.fileTrackingService == nil {
+		return
+	}
+
+	publicID := extractPublicIDFromURL(imageURL)
+	if publicID == "" {
+		return
+	}
+
+	fileUpload, err := w.fileTrackingService.GetFileUploadByPublicID(ctx, publicID)
+	if err != nil {
+		return
+	}
+
+	if err := w.fileTrackingService.RemoveFileReference(ctx, file_tracking.RemoveFileReferenceParams{
+		FileID:     fileUpload.ID,
+		EntityType: "product",
+		EntityID:   entityID,
+	}); err != nil {
+		log.Printf("Warning: Failed to remove file reference for publicID %s: %v", publicID, err)
+	}
+}
+
+// Utility functions
+func stringSlicesEqual(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func stringSliceContains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
 
 // extractPublicIDFromURL extracts public ID from Cloudinary URL
@@ -1227,8 +1357,117 @@ type mushroomService struct {
 	db *database.Queries
 }
 
+type mushroomServiceWrapper struct {
+	ms *mushroomService
+	fileTrackingService file_tracking.FileTrackingService
+}
+
 func NewMushroomService(db *database.Queries) service.MushroomService {
 	return &mushroomService{db: db}
+}
+
+func NewMushroomServiceWithFileTracking(db *database.Queries, fileTrackingService file_tracking.FileTrackingService) service.MushroomService {
+	return &mushroomServiceWrapper{
+		ms: &mushroomService{db: db},
+		fileTrackingService: fileTrackingService,
+	}
+}
+
+// Helper methods for mushroomServiceWrapper
+func (w *mushroomServiceWrapper) trackMushroomFiles(ctx context.Context, productID int32, thumbURL string, pictureURLs []string) {
+	if thumbURL != "" {
+		if err := w.addFileReference(ctx, thumbURL, productID, "ProductThumb"); err != nil {
+			log.Printf("Failed to add file reference for mushroom thumb %s: %v", thumbURL, err)
+		}
+	}
+
+	for _, pictureURL := range pictureURLs {
+		if pictureURL != "" {
+			if err := w.addFileReference(ctx, pictureURL, productID, "ProductPictures"); err != nil {
+				log.Printf("Failed to add file reference for mushroom picture %s: %v", pictureURL, err)
+			}
+		}
+	}
+}
+
+func (w *mushroomServiceWrapper) addFileReference(ctx context.Context, imageURL string, productID int32, fieldName string) error {
+	publicID := extractPublicIDFromURL(imageURL)
+	if publicID == "" {
+		return fmt.Errorf("could not extract public ID from URL: %s", imageURL)
+	}
+
+	uploadFile, err := w.fileTrackingService.GetFileUploadByPublicID(ctx, publicID)
+	if err != nil {
+		return fmt.Errorf("failed to get upload file by public ID %s: %w", publicID, err)
+	}
+
+	fileRef := file_tracking.AddFileReferenceParams{
+		FileID:        uploadFile.ID,
+		EntityType:    "product",
+		EntityID:      productID,
+		FieldName:     &fieldName,
+		ReferenceType: file_tracking.ReferenceTypeActive,
+	}
+
+	err = w.fileTrackingService.AddFileReference(ctx, fileRef)
+	if err != nil {
+		return fmt.Errorf("failed to add file reference: %w", err)
+	}
+
+	return nil
+}
+
+func (w *mushroomServiceWrapper) removeMushroomFileReferences(ctx context.Context, productID int32) {
+	if err := w.fileTrackingService.BatchRemoveReferences(ctx, "product", productID); err != nil {
+		log.Printf("Failed to remove file references for mushroom product %d: %v", productID, err)
+	}
+}
+
+// Implement MushroomService interface with file tracking
+func (w *mushroomServiceWrapper) CreateMushroom(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	product, err := w.ms.CreateMushroom(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Track files after successful creation
+	w.trackMushroomFiles(ctx, product.ID, product.ProductThumb, product.ProductPictures)
+
+	return product, nil
+}
+
+func (w *mushroomServiceWrapper) GetMushroom(ctx context.Context, id int32) (*database.Product, error) {
+	return w.ms.GetMushroom(ctx, id)
+}
+
+func (w *mushroomServiceWrapper) UpdateMushroom(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Get old product for comparison
+	oldProduct, err := w.ms.GetMushroom(ctx, params.(map[string]interface{})["id"].(int32))
+	if err != nil {
+		return nil, err
+	}
+
+	// Update product
+	updatedProduct, err := w.ms.UpdateMushroom(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update file tracking if files changed
+	if oldProduct.ProductThumb != updatedProduct.ProductThumb || !stringSlicesEqual(oldProduct.ProductPictures, updatedProduct.ProductPictures) {
+		w.removeMushroomFileReferences(ctx, updatedProduct.ID)
+		w.trackMushroomFiles(ctx, updatedProduct.ID, updatedProduct.ProductThumb, updatedProduct.ProductPictures)
+	}
+
+	return updatedProduct, nil
+}
+
+func (w *mushroomServiceWrapper) DeleteMushroom(ctx context.Context, id int32) error {
+	// Remove file references before deletion
+	w.removeMushroomFileReferences(ctx, id)
+
+	// Delete mushroom
+	return w.ms.DeleteMushroom(ctx, id)
 }
 
 func (s *mushroomService) CreateMushroom(ctx context.Context, name sql.NullString) (*database.Product, error) {
@@ -1328,8 +1567,117 @@ type vegetableService struct {
 	db *database.Queries
 }
 
+type vegetableServiceWrapper struct {
+	vs *vegetableService
+	fileTrackingService file_tracking.FileTrackingService
+}
+
 func NewVegetableService(db *database.Queries) service.VegetableService {
 	return &vegetableService{db: db}
+}
+
+func NewVegetableServiceWithFileTracking(db *database.Queries, fileTrackingService file_tracking.FileTrackingService) service.VegetableService {
+	return &vegetableServiceWrapper{
+		vs: &vegetableService{db: db},
+		fileTrackingService: fileTrackingService,
+	}
+}
+
+// Helper methods for vegetableServiceWrapper
+func (w *vegetableServiceWrapper) trackVegetableFiles(ctx context.Context, productID int32, thumbURL string, pictureURLs []string) {
+	if thumbURL != "" {
+		if err := w.addVegetableFileReference(ctx, thumbURL, productID, "ProductThumb"); err != nil {
+			log.Printf("Failed to add file reference for vegetable thumb %s: %v", thumbURL, err)
+		}
+	}
+
+	for _, pictureURL := range pictureURLs {
+		if pictureURL != "" {
+			if err := w.addVegetableFileReference(ctx, pictureURL, productID, "ProductPictures"); err != nil {
+				log.Printf("Failed to add file reference for vegetable picture %s: %v", pictureURL, err)
+			}
+		}
+	}
+}
+
+func (w *vegetableServiceWrapper) addVegetableFileReference(ctx context.Context, imageURL string, productID int32, fieldName string) error {
+	publicID := extractPublicIDFromURL(imageURL)
+	if publicID == "" {
+		return fmt.Errorf("could not extract public ID from URL: %s", imageURL)
+	}
+
+	uploadFile, err := w.fileTrackingService.GetFileUploadByPublicID(ctx, publicID)
+	if err != nil {
+		return fmt.Errorf("failed to get upload file by public ID %s: %w", publicID, err)
+	}
+
+	fileRef := file_tracking.AddFileReferenceParams{
+		FileID:        uploadFile.ID,
+		EntityType:    "product",
+		EntityID:      productID,
+		FieldName:     &fieldName,
+		ReferenceType: file_tracking.ReferenceTypeActive,
+	}
+
+	err = w.fileTrackingService.AddFileReference(ctx, fileRef)
+	if err != nil {
+		return fmt.Errorf("failed to add file reference: %w", err)
+	}
+
+	return nil
+}
+
+func (w *vegetableServiceWrapper) removeVegetableFileReferences(ctx context.Context, productID int32) {
+	if err := w.fileTrackingService.BatchRemoveReferences(ctx, "product", productID); err != nil {
+		log.Printf("Failed to remove file references for vegetable product %d: %v", productID, err)
+	}
+}
+
+// Implement VegetableService interface with file tracking
+func (w *vegetableServiceWrapper) CreateVegetable(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	product, err := w.vs.CreateVegetable(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Track files after successful creation
+	w.trackVegetableFiles(ctx, product.ID, product.ProductThumb, product.ProductPictures)
+
+	return product, nil
+}
+
+func (w *vegetableServiceWrapper) GetVegetable(ctx context.Context, id int32) (*database.Product, error) {
+	return w.vs.GetVegetable(ctx, id)
+}
+
+func (w *vegetableServiceWrapper) UpdateVegetable(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Get old product for comparison
+	oldProduct, err := w.vs.GetVegetable(ctx, params.(map[string]interface{})["id"].(int32))
+	if err != nil {
+		return nil, err
+	}
+
+	// Update product
+	updatedProduct, err := w.vs.UpdateVegetable(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update file tracking if files changed
+	if oldProduct.ProductThumb != updatedProduct.ProductThumb || !stringSlicesEqual(oldProduct.ProductPictures, updatedProduct.ProductPictures) {
+		w.removeVegetableFileReferences(ctx, updatedProduct.ID)
+		w.trackVegetableFiles(ctx, updatedProduct.ID, updatedProduct.ProductThumb, updatedProduct.ProductPictures)
+	}
+
+	return updatedProduct, nil
+}
+
+func (w *vegetableServiceWrapper) DeleteVegetable(ctx context.Context, id int32) error {
+	// Remove file references before deletion
+	w.removeVegetableFileReferences(ctx, id)
+
+	// Delete vegetable
+	return w.vs.DeleteVegetable(ctx, id)
 }
 
 func (s *vegetableService) CreateVegetable(ctx context.Context, name sql.NullString) (*database.Product, error) {
@@ -1429,8 +1777,117 @@ type bonsaiService struct {
 	db *database.Queries
 }
 
+type bonsaiServiceWrapper struct {
+	bs *bonsaiService
+	fileTrackingService file_tracking.FileTrackingService
+}
+
 func NewBonsaiService(db *database.Queries) service.BonsaiService {
 	return &bonsaiService{db: db}
+}
+
+func NewBonsaiServiceWithFileTracking(db *database.Queries, fileTrackingService file_tracking.FileTrackingService) service.BonsaiService {
+	return &bonsaiServiceWrapper{
+		bs: &bonsaiService{db: db},
+		fileTrackingService: fileTrackingService,
+	}
+}
+
+// Helper methods for bonsaiServiceWrapper
+func (w *bonsaiServiceWrapper) trackBonsaiFiles(ctx context.Context, productID int32, thumbURL string, pictureURLs []string) {
+	if thumbURL != "" {
+		if err := w.addBonsaiFileReference(ctx, thumbURL, productID, "ProductThumb"); err != nil {
+			log.Printf("Failed to add file reference for bonsai thumb %s: %v", thumbURL, err)
+		}
+	}
+
+	for _, pictureURL := range pictureURLs {
+		if pictureURL != "" {
+			if err := w.addBonsaiFileReference(ctx, pictureURL, productID, "ProductPictures"); err != nil {
+				log.Printf("Failed to add file reference for bonsai picture %s: %v", pictureURL, err)
+			}
+		}
+	}
+}
+
+func (w *bonsaiServiceWrapper) addBonsaiFileReference(ctx context.Context, imageURL string, productID int32, fieldName string) error {
+	publicID := extractPublicIDFromURL(imageURL)
+	if publicID == "" {
+		return fmt.Errorf("could not extract public ID from URL: %s", imageURL)
+	}
+
+	uploadFile, err := w.fileTrackingService.GetFileUploadByPublicID(ctx, publicID)
+	if err != nil {
+		return fmt.Errorf("failed to get upload file by public ID %s: %w", publicID, err)
+	}
+
+	fileRef := file_tracking.AddFileReferenceParams{
+		FileID:        uploadFile.ID,
+		EntityType:    "product",
+		EntityID:      productID,
+		FieldName:     &fieldName,
+		ReferenceType: file_tracking.ReferenceTypeActive,
+	}
+
+	err = w.fileTrackingService.AddFileReference(ctx, fileRef)
+	if err != nil {
+		return fmt.Errorf("failed to add file reference: %w", err)
+	}
+
+	return nil
+}
+
+func (w *bonsaiServiceWrapper) removeBonsaiFileReferences(ctx context.Context, productID int32) {
+	if err := w.fileTrackingService.BatchRemoveReferences(ctx, "product", productID); err != nil {
+		log.Printf("Failed to remove file references for bonsai product %d: %v", productID, err)
+	}
+}
+
+// Implement BonsaiService interface with file tracking
+func (w *bonsaiServiceWrapper) CreateBonsai(ctx context.Context, name sql.NullString) (*database.Product, error) {
+	product, err := w.bs.CreateBonsai(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Track files after successful creation
+	w.trackBonsaiFiles(ctx, product.ID, product.ProductThumb, product.ProductPictures)
+
+	return product, nil
+}
+
+func (w *bonsaiServiceWrapper) GetBonsai(ctx context.Context, id int32) (*database.Product, error) {
+	return w.bs.GetBonsai(ctx, id)
+}
+
+func (w *bonsaiServiceWrapper) UpdateBonsai(ctx context.Context, params interface{}) (*database.Product, error) {
+	// Get old product for comparison
+	oldProduct, err := w.bs.GetBonsai(ctx, params.(map[string]interface{})["id"].(int32))
+	if err != nil {
+		return nil, err
+	}
+
+	// Update product
+	updatedProduct, err := w.bs.UpdateBonsai(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update file tracking if files changed
+	if oldProduct.ProductThumb != updatedProduct.ProductThumb || !stringSlicesEqual(oldProduct.ProductPictures, updatedProduct.ProductPictures) {
+		w.removeBonsaiFileReferences(ctx, updatedProduct.ID)
+		w.trackBonsaiFiles(ctx, updatedProduct.ID, updatedProduct.ProductThumb, updatedProduct.ProductPictures)
+	}
+
+	return updatedProduct, nil
+}
+
+func (w *bonsaiServiceWrapper) DeleteBonsai(ctx context.Context, id int32) error {
+	// Remove file references before deletion
+	w.removeBonsaiFileReferences(ctx, id)
+
+	// Delete bonsai
+	return w.bs.DeleteBonsai(ctx, id)
 }
 
 func (s *bonsaiService) CreateBonsai(ctx context.Context, name sql.NullString) (*database.Product, error) {

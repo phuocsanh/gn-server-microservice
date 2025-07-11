@@ -13,9 +13,11 @@ import (
 	inventory2 "gn-farm-go-server/internal/controller/inventory"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/file_tracking"
 	"gn-farm-go-server/internal/service/impl/inventory"
 	"gn-farm-go-server/internal/service/impl/product"
 	"gn-farm-go-server/internal/service/impl/user"
+	"gn-farm-go-server/internal/service/upload"
 )
 
 // Injectors from inventory.wire.go:
@@ -55,9 +57,59 @@ func InitializeProductService(db *database.Queries) service.IProductService {
 	return iProductService
 }
 
+func InitializeProductServiceWithFileTracking(db *database.Queries) service.IProductService {
+	// Create upload config
+	uploadConfig, err := upload.ProvideConfig()
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewProductServiceImpl(db)
+	}
+
+	// Create upload service
+	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewProductServiceImpl(db)
+	}
+
+	// Create file tracking service
+	fileTrackingService := file_tracking.NewFileTrackingService(
+		db,
+		nil, // eventPublisher can be nil for now
+		uploadService,
+	)
+
+	return product.NewProductServiceImplWithFileTracking(db, fileTrackingService)
+}
+
 func InitializeMushroomService(db *database.Queries) service.MushroomService {
 	mushroomService := product.NewMushroomService(db)
 	return mushroomService
+}
+
+func InitializeMushroomServiceWithFileTracking(db *database.Queries) service.MushroomService {
+	// Create upload config
+	uploadConfig, err := upload.ProvideConfig()
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewMushroomService(db)
+	}
+
+	// Create upload service
+	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewMushroomService(db)
+	}
+
+	// Create file tracking service
+	fileTrackingService := file_tracking.NewFileTrackingService(
+		db,
+		nil, // eventPublisher can be nil for now
+		uploadService,
+	)
+
+	return product.NewMushroomServiceWithFileTracking(db, fileTrackingService)
 }
 
 func InitializeVegetableService(db *database.Queries) service.VegetableService {
@@ -65,9 +117,59 @@ func InitializeVegetableService(db *database.Queries) service.VegetableService {
 	return vegetableService
 }
 
+func InitializeVegetableServiceWithFileTracking(db *database.Queries) service.VegetableService {
+	// Create upload config
+	uploadConfig, err := upload.ProvideConfig()
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewVegetableService(db)
+	}
+
+	// Create upload service
+	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewVegetableService(db)
+	}
+
+	// Create file tracking service
+	fileTrackingService := file_tracking.NewFileTrackingService(
+		db,
+		nil, // eventPublisher can be nil for now
+		uploadService,
+	)
+
+	return product.NewVegetableServiceWithFileTracking(db, fileTrackingService)
+}
+
 func InitializeBonsaiService(db *database.Queries) service.BonsaiService {
 	bonsaiService := product.NewBonsaiService(db)
 	return bonsaiService
+}
+
+func InitializeBonsaiServiceWithFileTracking(db *database.Queries) service.BonsaiService {
+	// Create upload config
+	uploadConfig, err := upload.ProvideConfig()
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewBonsaiService(db)
+	}
+
+	// Create upload service
+	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+	if err != nil {
+		// Fallback to service without file tracking if initialization fails
+		return product.NewBonsaiService(db)
+	}
+
+	// Create file tracking service
+	fileTrackingService := file_tracking.NewFileTrackingService(
+		db,
+		nil, // eventPublisher can be nil for now
+		uploadService,
+	)
+
+	return product.NewBonsaiServiceWithFileTracking(db, fileTrackingService)
 }
 
 // Injectors from user.wire.go:
