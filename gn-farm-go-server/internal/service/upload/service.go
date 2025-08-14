@@ -7,9 +7,20 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UploadResult contains the result of a file upload
+type UploadResult struct {
+	PublicID   string `json:"public_id"`
+	SecureURL  string `json:"secure_url"`
+	URL        string `json:"url"`
+	Format     string `json:"format"`
+	FileSize   int64  `json:"file_size"`
+	FileName   string `json:"file_name"`
+	Folder     string `json:"folder"`
+}
+
 type UploadService interface {
-	// UploadImage uploads an image file and returns the URL
-	UploadImage(ctx *gin.Context, file *multipart.FileHeader, folder string) (string, error)
+	// UploadImage uploads an image file and returns the upload result
+	UploadImage(ctx *gin.Context, file *multipart.FileHeader, folder string) (*UploadResult, error)
 	
 	// UploadFile uploads a file to cloud storage
 	UploadFile(ctx context.Context, file []byte, filename, folder string) (string, error)

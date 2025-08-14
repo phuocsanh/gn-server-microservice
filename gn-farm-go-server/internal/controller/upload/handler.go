@@ -42,7 +42,7 @@ func (h *uploadHandler) UploadFile(c *gin.Context) {
 	folder := c.DefaultQuery("folder", "temp")
 
 	// Upload file lên Cloudinary
-	url, err := h.uploadService.UploadImage(c, file, folder)
+	uploadResult, err := h.uploadService.UploadImage(c, file, folder)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, UploadResponse{
 			Code:    http.StatusInternalServerError,
@@ -51,12 +51,28 @@ func (h *uploadHandler) UploadFile(c *gin.Context) {
 		return
 	}
 
-	// Trả về URL của file đã upload
+	// Set upload response vào context để middleware có thể track
+	uploadResponseMap := map[string]interface{}{
+		"public_id":  uploadResult.PublicID,
+		"secure_url": uploadResult.SecureURL,
+		"url":        uploadResult.URL,
+		"format":     uploadResult.Format,
+		"file_size":  uploadResult.FileSize,
+		"file_name":  uploadResult.FileName,
+		"folder":     uploadResult.Folder,
+	}
+	c.Set("upload_response", uploadResponseMap)
+
+	// Trả về thông tin file đã upload
 	c.JSON(http.StatusOK, UploadResponse{
 		Code:    http.StatusOK,
 		Message: "Upload file thành công",
 		Data: gin.H{
-			"url": url,
+			"url":       uploadResult.SecureURL,
+			"public_id": uploadResult.PublicID,
+			"file_name": uploadResult.FileName,
+			"file_size": uploadResult.FileSize,
+			"folder":    uploadResult.Folder,
 		},
 	})
 }

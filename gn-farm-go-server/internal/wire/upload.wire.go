@@ -19,7 +19,9 @@ func InitUploadService() (upload.UploadService, error) {
 		return nil, err
 	}
 
-	cloudinaryService, err := upload.NewCloudinaryService(uploadConfig)
+	// Tạm thời khởi tạo với nil file tracking service
+	// File tracking service sẽ được inject sau
+	cloudinaryService, err := upload.NewCloudinaryService(uploadConfig, nil)
 	if err != nil {
 		return nil, err
 	}

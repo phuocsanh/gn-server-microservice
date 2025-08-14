@@ -5,7 +5,7 @@ postgres:
   host: postgres_gn_farm
   port: 5432
   username: postgres
-  password: 123456
+  password: postgres
   dbname: GO_GN_FARM
   maxIdleConns: 10
   maxOpenConns: 100

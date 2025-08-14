@@ -442,9 +442,11 @@ func (m *FileUploadMiddleware) processUpload(c *gin.Context) {
 		fileURL, _ = uploadResponse["url"].(string)
 	}
 	
-	fileName, _ := uploadResponse["original_filename"].(string)
+	// Use correct field names from upload handler
+	fileName, _ := uploadResponse["file_name"].(string)
 	fileType, _ := uploadResponse["resource_type"].(string)
-	fileSize, _ := uploadResponse["bytes"].(float64)
+	fileSize, _ := uploadResponse["file_size"].(int64)
+	folder, _ := uploadResponse["folder"].(string)
 	
 	// Get user ID
 	userID := m.getUserIDFromContext(c)
@@ -455,7 +457,8 @@ func (m *FileUploadMiddleware) processUpload(c *gin.Context) {
 		FileURL:           fileURL,
 		FileName:          fileName,
 		FileType:          fileType,
-		FileSize:          int64(fileSize),
+		FileSize:          fileSize,
+		Folder:            &folder,
 		UploadedByUserID:  userID,
 		Metadata:          uploadResponse,
 	})

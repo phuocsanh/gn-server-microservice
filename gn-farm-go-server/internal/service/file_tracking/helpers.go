@@ -38,6 +38,9 @@ func (h *FileTrackingHelper) TrackUploadedFile(
 	folder := h.extractFolderFromURL(fileURL)
 	tags := h.generateTagsFromMetadata(metadata)
 
+	// Check if file is temporary based on tags
+	isTemporary := h.containsTag(tags, "temporary")
+
 	// Create file upload record
 	fileUpload, err := h.fileService.CreateFileUpload(ctx, CreateFileUploadParams{
 		PublicID:          publicID,
@@ -50,6 +53,7 @@ func (h *FileTrackingHelper) TrackUploadedFile(
 		UploadedByUserID:  userID,
 		Tags:              tags,
 		Metadata:          metadata,
+		IsTemporary:       &isTemporary,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file upload: %w", err)
@@ -484,5 +488,15 @@ func (v *ValidationHelper) ValidateReferenceType(refType string) bool {
 		}
 	}
 	
+	return false
+}
+
+// containsTag checks if a slice of tags contains a specific tag
+func (h *FileTrackingHelper) containsTag(tags []string, target string) bool {
+	for _, tag := range tags {
+		if tag == target {
+			return true
+		}
+	}
 	return false
 }

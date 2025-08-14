@@ -19,11 +19,12 @@ import (
 )
 
 type CloudinaryService struct {
-	cld *cloudinary.Cloudinary
+	cld              *cloudinary.Cloudinary
+	fileTrackingSvc FileTrackingService
 }
 
 // NewCloudinaryService tạo mới một instance của CloudinaryService
-func NewCloudinaryService(cfg *UploadConfig) (*CloudinaryService, error) {
+func NewCloudinaryService(cfg *UploadConfig, fileTrackingSvc FileTrackingService) (*CloudinaryService, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("cloudinary config is required")
 	}
@@ -38,31 +39,91 @@ func NewCloudinaryService(cfg *UploadConfig) (*CloudinaryService, error) {
 		return nil, fmt.Errorf("failed to initialize Cloudinary: %v", err)
 	}
 
-	return &CloudinaryService{cld: cld}, nil
+	return &CloudinaryService{
+		cld:             cld,
+		fileTrackingSvc: fileTrackingSvc,
+	}, nil
 }
 
-func (s *CloudinaryService) UploadImage(c *gin.Context, file *multipart.FileHeader, folder string) (string, error) {
+// SetFileTrackingService sets the file tracking service after initialization
+func (s *CloudinaryService) SetFileTrackingService(fileTrackingSvc FileTrackingService) {
+	s.fileTrackingSvc = fileTrackingSvc
+}
+
+func (s *CloudinaryService) UploadImage(c *gin.Context, file *multipart.FileHeader, folder string) (*UploadResult, error) {
 	// Mở file
 	src, err := file.Open()
 	if err != nil {
-		return "", fmt.Errorf("failed to open file: %v", err)
+		return nil, fmt.Errorf("failed to open file: %v", err)
 	}
 	defer src.Close()
 
 	// Đọc toàn bộ file vào bộ nhớ
 	fileBytes, err := io.ReadAll(src)
 	if err != nil {
-		return "", fmt.Errorf("failed to read file: %v", err)
+		return nil, fmt.Errorf("failed to read file: %v", err)
 	}
 
-	// Upload với tag tạm thời
-	return s.UploadFile(c.Request.Context(), fileBytes, file.Filename, folder)
+	// Tạo public ID từ tên file (bỏ đuôi)
+	ext := filepath.Ext(file.Filename)
+	publicID := strings.TrimSuffix(file.Filename, ext)
+
+	// Tạo một reader từ byte slice
+	reader := bytes.NewReader(fileBytes)
+
+	// Upload lên Cloudinary với tag tạm thời
+	result, err := s.cld.Upload.Upload(
+		c.Request.Context(),
+		reader,
+		uploader.UploadParams{
+			Folder:   folder,
+			PublicID: publicID,
+			Tags:     []string{"temporary"}, // Đánh dấu là file tạm thời
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload file to Cloudinary: %v", err)
+	}
+
+	// Tạo UploadResult
+	uploadResult := &UploadResult{
+		PublicID:  result.PublicID,
+		SecureURL: result.SecureURL,
+		URL:       result.URL,
+		Format:    result.Format,
+		FileSize:  int64(len(fileBytes)),
+		FileName:  file.Filename,
+		Folder:    folder,
+	}
+
+	// Lưu thông tin file vào database nếu có file tracking service
+	if s.fileTrackingSvc != nil {
+		// Tạo params cho CreateFileUpload
+		params := map[string]interface{}{
+			"public_id": result.PublicID,
+			"file_url":  result.SecureURL,
+			"file_name": file.Filename,
+			"file_type": ext,
+			"file_size": int64(len(fileBytes)),
+			"folder":    folder,
+			"mime_type": result.Format,
+			"tags":      []string{"temporary"},
+		}
+
+		_, err = s.fileTrackingSvc.CreateFileUpload(c.Request.Context(), params)
+		if err != nil {
+			log.Printf("Failed to save file upload info to database: %v", err)
+			// Không trả về lỗi vì file đã upload thành công lên Cloudinary
+		}
+	}
+
+	return uploadResult, nil
 }
 
 func (s *CloudinaryService) UploadFile(ctx context.Context, file []byte, filename, folder string) (string, error) {
 	// Tạo public ID từ tên file (bỏ đuôi)
 	ext := filepath.Ext(filename)
-	publicID := filename[:len(filename)-len(ext)]
+	publicID := strings.TrimSuffix(filename, ext)
 
 	// Tạo một reader từ byte slice
 	reader := bytes.NewReader(file)
@@ -79,6 +140,27 @@ func (s *CloudinaryService) UploadFile(ctx context.Context, file []byte, filenam
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload file to Cloudinary: %v", err)
+	}
+
+	// Lưu thông tin file vào database nếu có file tracking service
+	if s.fileTrackingSvc != nil {
+		// Tạo params cho CreateFileUpload
+		params := map[string]interface{}{
+			"public_id": publicID,
+			"file_url":  result.SecureURL,
+			"file_name": filename,
+			"file_type": ext,
+			"file_size": int64(len(file)),
+			"folder":    folder,
+			"mime_type": result.Format,
+			"tags":      []string{"temporary"},
+		}
+
+		_, err = s.fileTrackingSvc.CreateFileUpload(ctx, params)
+		if err != nil {
+			log.Printf("Failed to save file upload info to database: %v", err)
+			// Không trả về lỗi vì file đã upload thành công lên Cloudinary
+		}
 	}
 
 	return result.SecureURL, nil

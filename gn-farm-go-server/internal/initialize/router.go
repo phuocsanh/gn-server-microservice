@@ -3,10 +3,11 @@ package initialize
 import (
 	"gn-farm-go-server/global"
 	"gn-farm-go-server/internal/controller/health"
-	"gn-farm-go-server/internal/handler/upload"
+	"gn-farm-go-server/internal/controller/upload"
 	"gn-farm-go-server/internal/middlewares"
 	"gn-farm-go-server/internal/routers"
 	"gn-farm-go-server/internal/service"
+	"gn-farm-go-server/internal/service/file_tracking"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -45,9 +46,15 @@ func InitRouter() *gin.Engine {
 	userRouterGroup := routers.RouterGroupApp.User
 	productRouterGroup := routers.RouterGroupApp.Product
 
-	// Initialize upload handler
+	// Initialize upload handler with file tracking
 	uploadHandler := upload.NewUploadHandler(service.Upload())
-	uploadRouter := routers.NewUploadRouter(uploadHandler)
+	
+	// Tạo file tracking dependencies
+	fileTrackingService := service.FileTracking()
+	fileTrackingHelper := file_tracking.NewFileTrackingHelper(fileTrackingService)
+	fileUploadMiddleware := file_tracking.NewFileUploadMiddleware(fileTrackingHelper)
+	
+	uploadRouter := routers.NewUploadRouter(uploadHandler, fileUploadMiddleware)
 
 	// Health check endpoints (outside versioned API)
 	r.GET("/health", health.Health.HealthCheck)

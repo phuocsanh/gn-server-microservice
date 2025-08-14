@@ -22,8 +22,8 @@ func InitFileTrackingService(
 		return nil, err
 	}
 
-	// Create upload service
-	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+	// Create upload service with nil file tracking service (to avoid circular dependency)
+	uploadService, err := upload.NewCloudinaryService(uploadConfig, nil)
 	if err != nil {
 		return nil, err
 	}

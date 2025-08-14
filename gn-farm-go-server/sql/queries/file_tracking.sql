@@ -1,9 +1,9 @@
 -- name: CreateFileUpload :one
 INSERT INTO file_uploads (
     public_id, file_url, file_name, file_type, file_size, folder, mime_type,
-    uploaded_by_user_id, tags, metadata
+    uploaded_by_user_id, tags, metadata, is_temporary
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING *;
 
 -- name: GetFileUploadByPublicID :one
@@ -113,7 +113,16 @@ INSERT INTO file_cleanup_jobs (
 
 -- name: UpdateCleanupJobStatus :exec
 UPDATE file_cleanup_jobs 
-SET status = $2, 
+SET status = $2,
+    files_processed = COALESCE($3, files_processed),
+    files_deleted = COALESCE($4, files_deleted),
+    files_failed = COALESCE($5, files_failed),
+    error_message = COALESCE($6, error_message)
+WHERE id = $1;
+
+-- name: UpdateCleanupJobStatusWithTiming :exec
+UPDATE file_cleanup_jobs 
+SET status = $2,
     started_at = CASE WHEN $2 = 'running' THEN CURRENT_TIMESTAMP ELSE started_at END,
     completed_at = CASE WHEN $2 IN ('completed', 'failed') THEN CURRENT_TIMESTAMP ELSE completed_at END,
     files_processed = COALESCE($3, files_processed),

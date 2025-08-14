@@ -19,6 +19,11 @@ type fileTrackingService struct {
 	uploadService  upload.UploadService
 }
 
+// SetUploadService cập nhật upload service
+func (s *fileTrackingService) SetUploadService(service upload.UploadService) {
+	s.uploadService = service
+}
+
 // EventPublisher interface for publishing file events to message queue
 type EventPublisher interface {
 	PublishFileEvent(ctx context.Context, event FileEvent) error
@@ -39,6 +44,8 @@ func NewFileTrackingService(
 
 // CreateFileUpload tạo record file upload mới
 func (s *fileTrackingService) CreateFileUpload(ctx context.Context, params CreateFileUploadParams) (*database.FileUpload, error) {
+	log.Printf("[FILE_TRACKING] Creating file upload - PublicID: %s, FileName: %s, FileSize: %d", params.PublicID, params.FileName, params.FileSize)
+	
 	// Convert metadata to JSONB
 	metadataJSON, err := json.Marshal(params.Metadata)
 	if err != nil {
@@ -46,17 +53,38 @@ func (s *fileTrackingService) CreateFileUpload(ctx context.Context, params Creat
 	}
 
 	// Create file upload record
+	var folder sql.NullString
+	if params.Folder != nil {
+		folder = sql.NullString{String: *params.Folder, Valid: true}
+	}
+
+	var mimeType sql.NullString
+	if params.MimeType != nil {
+		mimeType = sql.NullString{String: *params.MimeType, Valid: true}
+	}
+
+	var uploadedByUserID sql.NullInt32
+	if params.UploadedByUserID != nil {
+		uploadedByUserID = sql.NullInt32{Int32: *params.UploadedByUserID, Valid: true}
+	}
+
+	var isTemporary sql.NullBool
+	if params.IsTemporary != nil {
+		isTemporary = sql.NullBool{Bool: *params.IsTemporary, Valid: true}
+	}
+
 	fileUpload, err := s.db.CreateFileUpload(ctx, database.CreateFileUploadParams{
 		PublicID:         params.PublicID,
 		FileUrl:          params.FileURL,
 		FileName:         params.FileName,
 		FileType:         params.FileType,
 		FileSize:         params.FileSize,
-		Folder:           sql.NullString{String: *params.Folder, Valid: params.Folder != nil},
-		MimeType:         sql.NullString{String: *params.MimeType, Valid: params.MimeType != nil},
-		UploadedByUserID: sql.NullInt32{Int32: *params.UploadedByUserID, Valid: params.UploadedByUserID != nil},
+		Folder:           folder,
+		MimeType:         mimeType,
+		UploadedByUserID: uploadedByUserID,
 		Tags:             params.Tags,
 		Metadata:         pqtype.NullRawMessage{RawMessage: metadataJSON, Valid: len(metadataJSON) > 0},
+		IsTemporary:      isTemporary,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file upload: %w", err)
@@ -97,6 +125,7 @@ func (s *fileTrackingService) CreateFileUpload(ctx context.Context, params Creat
 		}
 	}
 
+	log.Printf("[FILE_TRACKING] File upload created successfully - ID: %d, PublicID: %s, CreatedAt: %v", fileUpload.ID, fileUpload.PublicID, fileUpload.CreatedAt)
 	return &fileUpload, nil
 }
 
@@ -121,13 +150,23 @@ func (s *fileTrackingService) GetFileUploadByID(ctx context.Context, id int32) (
 // AddFileReference thêm reference mới cho file
 func (s *fileTrackingService) AddFileReference(ctx context.Context, params AddFileReferenceParams) error {
 	// Create file reference
+	var fieldName sql.NullString
+	if params.FieldName != nil {
+		fieldName = sql.NullString{String: *params.FieldName, Valid: true}
+	}
+
+	var createdByUserID sql.NullInt32
+	if params.CreatedByUserID != nil {
+		createdByUserID = sql.NullInt32{Int32: *params.CreatedByUserID, Valid: true}
+	}
+
 	_, err := s.db.CreateFileReference(ctx, database.CreateFileReferenceParams{
 		FileID:           params.FileID,
 		EntityType:       params.EntityType,
 		EntityID:         params.EntityID,
-		FieldName:        sql.NullString{String: *params.FieldName, Valid: params.FieldName != nil},
+		FieldName:        fieldName,
 		ReferenceType:    sql.NullString{String: params.ReferenceType, Valid: true},
-		CreatedByUserID:  sql.NullInt32{Int32: *params.CreatedByUserID, Valid: params.CreatedByUserID != nil},
+		CreatedByUserID:  createdByUserID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create file reference: %w", err)
@@ -154,11 +193,16 @@ func (s *fileTrackingService) AddFileReference(ctx context.Context, params AddFi
 
 // RemoveFileReference xóa reference của file
 func (s *fileTrackingService) RemoveFileReference(ctx context.Context, params RemoveFileReferenceParams) error {
+	var deletedByUserID sql.NullInt32
+	if params.DeletedByUserID != nil {
+		deletedByUserID = sql.NullInt32{Int32: *params.DeletedByUserID, Valid: true}
+	}
+
 	err := s.db.DeleteFileReference(ctx, database.DeleteFileReferenceParams{
 		FileID:           params.FileID,
 		EntityType:       params.EntityType,
 		EntityID:         params.EntityID,
-		DeletedByUserID:  sql.NullInt32{Int32: *params.DeletedByUserID, Valid: params.DeletedByUserID != nil},
+		DeletedByUserID:  deletedByUserID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete file reference: %w", err)
@@ -250,6 +294,7 @@ func (s *fileTrackingService) MarkOrphanedFiles(ctx context.Context) (int, error
 // CleanupTemporaryFiles dọn dẹp các file tạm thời
 func (s *fileTrackingService) CleanupTemporaryFiles(ctx context.Context, olderThan time.Duration) (*CleanupResult, error) {
 	startTime := time.Now()
+	log.Printf("[FILE_TRACKING] Starting CleanupTemporaryFiles - olderThan: %v, cutoffTime will be: %v", olderThan, time.Now().Add(-olderThan))
 	
 	// Create cleanup job
 	jobParams := map[string]interface{}{
@@ -272,6 +317,7 @@ func (s *fileTrackingService) CleanupTemporaryFiles(ctx context.Context, olderTh
 
 	// Get temporary files older than specified duration
 	cutoffTime := time.Now().Add(-olderThan)
+	log.Printf("[FILE_TRACKING] Querying temporary files older than: %v", cutoffTime)
 	files, err := s.db.GetTemporaryFiles(ctx, database.GetTemporaryFilesParams{
 		CreatedAt: sql.NullTime{Time: cutoffTime, Valid: true},
 		Limit:     1000, // Process in batches
@@ -279,6 +325,7 @@ func (s *fileTrackingService) CleanupTemporaryFiles(ctx context.Context, olderTh
 	if err != nil {
 		return nil, fmt.Errorf("failed to get temporary files: %w", err)
 	}
+	log.Printf("[FILE_TRACKING] Found %d temporary files to process", len(files))
 
 	result := &CleanupResult{
 		JobID:          job.ID,
@@ -337,6 +384,8 @@ func (s *fileTrackingService) CleanupTemporaryFiles(ctx context.Context, olderTh
 		log.Printf("Failed to update cleanup job status: %v", err)
 	}
 
+	log.Printf("[FILE_TRACKING] CleanupTemporaryFiles completed - JobID: %d, Processed: %d, Deleted: %d, Failed: %d, Duration: %v", 
+		result.JobID, result.FilesProcessed, result.FilesDeleted, result.FilesFailed, result.Duration)
 	return result, nil
 }
 
@@ -477,17 +526,52 @@ func (s *fileTrackingService) LogFileAction(ctx context.Context, params LogFileA
 		return fmt.Errorf("failed to marshal details: %w", err)
 	}
 
+	var fileID sql.NullInt32
+	if params.FileID != nil {
+		fileID = sql.NullInt32{Int32: *params.FileID, Valid: true}
+	}
+
+	var entityType sql.NullString
+	if params.EntityType != nil {
+		entityType = sql.NullString{String: *params.EntityType, Valid: true}
+	}
+
+	var entityID sql.NullInt32
+	if params.EntityID != nil {
+		entityID = sql.NullInt32{Int32: *params.EntityID, Valid: true}
+	}
+
+	var oldReferenceCount sql.NullInt32
+	if params.OldReferenceCount != nil {
+		oldReferenceCount = sql.NullInt32{Int32: *params.OldReferenceCount, Valid: true}
+	}
+
+	var newReferenceCount sql.NullInt32
+	if params.NewReferenceCount != nil {
+		newReferenceCount = sql.NullInt32{Int32: *params.NewReferenceCount, Valid: true}
+	}
+
+	var performedByUserID sql.NullInt32
+	if params.PerformedByUserID != nil {
+		performedByUserID = sql.NullInt32{Int32: *params.PerformedByUserID, Valid: true}
+	}
+
+	var userAgent sql.NullString
+	if params.UserAgent != nil {
+		userAgent = sql.NullString{String: *params.UserAgent, Valid: true}
+	}
+
 	_, err = s.db.CreateFileAuditLog(ctx, database.CreateFileAuditLogParams{
-		FileID:               sql.NullInt32{Int32: *params.FileID, Valid: params.FileID != nil},
+		FileID:               fileID,
 		Action:               params.Action,
-		EntityType:           sql.NullString{String: *params.EntityType, Valid: params.EntityType != nil},
-		EntityID:             sql.NullInt32{Int32: *params.EntityID, Valid: params.EntityID != nil},
-		OldReferenceCount:    sql.NullInt32{Int32: *params.OldReferenceCount, Valid: params.OldReferenceCount != nil},
-		NewReferenceCount:    sql.NullInt32{Int32: *params.NewReferenceCount, Valid: params.NewReferenceCount != nil},
+		EntityType:           entityType,
+		EntityID:             entityID,
+		OldReferenceCount:    oldReferenceCount,
+		NewReferenceCount:    newReferenceCount,
 		Details:              pqtype.NullRawMessage{RawMessage: detailsJSON, Valid: len(detailsJSON) > 0},
-		PerformedByUserID:    sql.NullInt32{Int32: *params.PerformedByUserID, Valid: params.PerformedByUserID != nil},
+		PerformedByUserID:    performedByUserID,
 		IpAddress:            pqtype.Inet{Valid: false},
-		UserAgent:            sql.NullString{String: *params.UserAgent, Valid: params.UserAgent != nil},
+		UserAgent:            userAgent,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create audit log: %w", err)

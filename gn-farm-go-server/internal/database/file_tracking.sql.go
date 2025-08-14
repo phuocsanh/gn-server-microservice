@@ -156,9 +156,9 @@ func (q *Queries) CreateFileReference(ctx context.Context, arg CreateFileReferen
 const createFileUpload = `-- name: CreateFileUpload :one
 INSERT INTO file_uploads (
     public_id, file_url, file_name, file_type, file_size, folder, mime_type,
-    uploaded_by_user_id, tags, metadata
+    uploaded_by_user_id, tags, metadata, is_temporary
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 ) RETURNING id, public_id, file_url, file_name, file_type, file_size, folder, mime_type, reference_count, is_temporary, is_orphaned, uploaded_by_user_id, tags, metadata, created_at, updated_at, marked_for_deletion_at, deleted_at
 `
 
@@ -173,6 +173,7 @@ type CreateFileUploadParams struct {
 	UploadedByUserID sql.NullInt32         `json:"uploadedByUserId"`
 	Tags             []string              `json:"tags"`
 	Metadata         pqtype.NullRawMessage `json:"metadata"`
+	IsTemporary      sql.NullBool          `json:"isTemporary"`
 }
 
 func (q *Queries) CreateFileUpload(ctx context.Context, arg CreateFileUploadParams) (FileUpload, error) {
@@ -187,6 +188,7 @@ func (q *Queries) CreateFileUpload(ctx context.Context, arg CreateFileUploadPara
 		arg.UploadedByUserID,
 		pq.Array(arg.Tags),
 		arg.Metadata,
+		arg.IsTemporary,
 	)
 	var i FileUpload
 	err := row.Scan(
@@ -1069,9 +1071,7 @@ func (q *Queries) SearchFiles(ctx context.Context, arg SearchFilesParams) ([]Fil
 
 const updateCleanupJobStatus = `-- name: UpdateCleanupJobStatus :exec
 UPDATE file_cleanup_jobs 
-SET status = $2, 
-    started_at = CASE WHEN $2 = 'running' THEN CURRENT_TIMESTAMP ELSE started_at END,
-    completed_at = CASE WHEN $2 IN ('completed', 'failed') THEN CURRENT_TIMESTAMP ELSE completed_at END,
+SET status = $2,
     files_processed = COALESCE($3, files_processed),
     files_deleted = COALESCE($4, files_deleted),
     files_failed = COALESCE($5, files_failed),
@@ -1090,6 +1090,39 @@ type UpdateCleanupJobStatusParams struct {
 
 func (q *Queries) UpdateCleanupJobStatus(ctx context.Context, arg UpdateCleanupJobStatusParams) error {
 	_, err := q.db.ExecContext(ctx, updateCleanupJobStatus,
+		arg.ID,
+		arg.Status,
+		arg.FilesProcessed,
+		arg.FilesDeleted,
+		arg.FilesFailed,
+		arg.ErrorMessage,
+	)
+	return err
+}
+
+const updateCleanupJobStatusWithTiming = `-- name: UpdateCleanupJobStatusWithTiming :exec
+UPDATE file_cleanup_jobs 
+SET status = $2,
+    started_at = CASE WHEN $2 = 'running' THEN CURRENT_TIMESTAMP ELSE started_at END,
+    completed_at = CASE WHEN $2 IN ('completed', 'failed') THEN CURRENT_TIMESTAMP ELSE completed_at END,
+    files_processed = COALESCE($3, files_processed),
+    files_deleted = COALESCE($4, files_deleted),
+    files_failed = COALESCE($5, files_failed),
+    error_message = COALESCE($6, error_message)
+WHERE id = $1
+`
+
+type UpdateCleanupJobStatusWithTimingParams struct {
+	ID             int32          `json:"id"`
+	Status         sql.NullString `json:"status"`
+	FilesProcessed sql.NullInt32  `json:"filesProcessed"`
+	FilesDeleted   sql.NullInt32  `json:"filesDeleted"`
+	FilesFailed    sql.NullInt32  `json:"filesFailed"`
+	ErrorMessage   sql.NullString `json:"errorMessage"`
+}
+
+func (q *Queries) UpdateCleanupJobStatusWithTiming(ctx context.Context, arg UpdateCleanupJobStatusWithTimingParams) error {
+	_, err := q.db.ExecContext(ctx, updateCleanupJobStatusWithTiming,
 		arg.ID,
 		arg.Status,
 		arg.FilesProcessed,

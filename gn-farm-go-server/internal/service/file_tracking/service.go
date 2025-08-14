@@ -50,6 +50,7 @@ type CreateFileUploadParams struct {
 	UploadedByUserID *int32
 	Tags             []string
 	Metadata         map[string]interface{}
+	IsTemporary      *bool
 }
 
 type AddFileReferenceParams struct {

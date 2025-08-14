@@ -13,6 +13,62 @@ import (
 	"gn-farm-go-server/internal/service/upload"
 )
 
+// fileTrackingServiceAdapter là adapter để chuyển đổi FileTrackingService thành FileTrackingService interface của upload package
+type fileTrackingServiceAdapter struct {
+	svc file_tracking.FileTrackingService
+}
+
+// NewFileTrackingServiceAdapter creates a new file tracking service adapter
+func NewFileTrackingServiceAdapter(svc file_tracking.FileTrackingService) *fileTrackingServiceAdapter {
+	return &fileTrackingServiceAdapter{svc: svc}
+}
+
+// CreateFileUpload triển khai interface FileTrackingService của upload package
+func (a *fileTrackingServiceAdapter) CreateFileUpload(ctx context.Context, params interface{}) (interface{}, error) {
+	// Chuyển đổi params từ map sang CreateFileUploadParams
+	p, ok := params.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid params type: %T", params)
+	}
+
+	// Tạo CreateFileUploadParams
+	createParams := file_tracking.CreateFileUploadParams{
+		PublicID: p["public_id"].(string),
+		FileURL:  p["file_url"].(string),
+		FileName: p["file_name"].(string),
+		FileType: p["file_type"].(string),
+		FileSize: p["file_size"].(int64),
+	}
+
+	// Thêm các trường optional nếu có
+	if folder, ok := p["folder"].(string); ok && folder != "" {
+		createParams.Folder = &folder
+	}
+
+	if mimeType, ok := p["mime_type"].(string); ok && mimeType != "" {
+		createParams.MimeType = &mimeType
+	}
+
+	if tags, ok := p["tags"].([]string); ok && len(tags) > 0 {
+		createParams.Tags = tags
+		log.Printf("[FILE_TRACKING_CONFIG] Processing tags: %v", tags)
+		// Kiểm tra nếu có tag "temporary" thì đánh dấu file là temporary
+		for _, tag := range tags {
+			if tag == "temporary" {
+				isTemp := true
+				createParams.IsTemporary = &isTemp
+				log.Printf("[FILE_TRACKING_CONFIG] Found temporary tag, setting IsTemporary to true")
+				break
+			}
+		}
+	} else {
+		log.Printf("[FILE_TRACKING_CONFIG] No tags found or type assertion failed. Tags value: %v, Type: %T", p["tags"], p["tags"])
+	}
+
+	// Gọi service thực tế
+	return a.svc.CreateFileUpload(ctx, createParams)
+}
+
 // FileTrackingConfig contains configuration for file tracking system
 type FileTrackingConfig struct {
 	// Database configuration
@@ -136,21 +192,34 @@ func SetupFileTrackingDependencies(
 	}
 	
 	// Setup core file tracking service
+	deps.FileService = file_tracking.NewFileTrackingService(
+		db,
+		deps.EventPublisher,
+		nil, // uploadService sẽ được cấu hình sau
+	)
+
 	// Create upload service with config
 	uploadConfig, err := upload.ProvideConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create upload config: %v", err)
 	}
-	uploadService, err := upload.NewCloudinaryService(uploadConfig)
+
+	// Tạo file tracking service adapter
+	fileTrackingSvcAdapter := &fileTrackingServiceAdapter{
+		svc: deps.FileService,
+	}
+
+	// Tạo upload service với file tracking service
+	uploadService, err := upload.NewCloudinaryService(uploadConfig, fileTrackingSvcAdapter)
 	if err != nil {
-		// If cloudinary config is missing, create a nil service for now
+		// Nếu không thể khởi tạo CloudinaryService, vẫn tiếp tục với service nil
 		uploadService = nil
 	}
-	deps.FileService = file_tracking.NewFileTrackingService(
-		db,
-		deps.EventPublisher,
-		uploadService,
-	)
+
+	// Cập nhật upload service trong file tracking service
+	if fts, ok := deps.FileService.(interface{ SetUploadService(service upload.UploadService) }); ok && uploadService != nil {
+		fts.SetUploadService(uploadService)
+	}
 	
 	// Setup helpers and utilities
 	deps.Helper = file_tracking.NewFileTrackingHelper(deps.FileService)

@@ -12,3 +12,8 @@ var ProviderSet = wire.NewSet(
 	NewCloudinaryService,
 	wire.Bind(new(UploadService), new(*CloudinaryService)),
 )
+
+// NewCloudinaryServiceWithDeps tạo mới CloudinaryService với các dependency cần thiết
+func NewCloudinaryServiceWithDeps(cfg *UploadConfig, fileTrackingSvc FileTrackingService) (UploadService, error) {
+	return NewCloudinaryService(cfg, fileTrackingSvc)
+}

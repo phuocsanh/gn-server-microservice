@@ -272,16 +272,18 @@ func (s *CleanupScheduler) Start(ctx context.Context) error {
 	ticker := time.NewTicker(s.cleanupInterval)
 	defer ticker.Stop()
 
-	log.Printf("Started cleanup scheduler with interval: %v", s.cleanupInterval)
+	log.Printf("[EVENT_PUBLISHER_SCHEDULER] Started cleanup scheduler with interval: %v, TempFileAge: %v, OrphanedGracePeriod: %v", 
+		s.cleanupInterval, s.temporaryFileAge, s.orphanedGracePeriod)
 
 	for {
 		select {
 		case <-ticker.C:
+			log.Printf("[EVENT_PUBLISHER_SCHEDULER] Ticker triggered - running cleanup at %v", time.Now())
 			if err := s.runCleanup(ctx); err != nil {
-				log.Printf("Cleanup failed: %v", err)
+				log.Printf("[EVENT_PUBLISHER_SCHEDULER] Cleanup failed: %v", err)
 			}
 		case <-ctx.Done():
-			log.Println("Cleanup scheduler stopped")
+			log.Println("[EVENT_PUBLISHER_SCHEDULER] Cleanup scheduler stopped")
 			return ctx.Err()
 		}
 	}
@@ -289,34 +291,34 @@ func (s *CleanupScheduler) Start(ctx context.Context) error {
 
 // runCleanup performs the actual cleanup operations
 func (s *CleanupScheduler) runCleanup(ctx context.Context) error {
-	log.Println("Running scheduled cleanup...")
+	log.Printf("[EVENT_PUBLISHER_SCHEDULER] Running scheduled cleanup at %v...", time.Now())
 
 	// Cleanup temporary files
-	log.Printf("Cleaning up temporary files older than %v", s.temporaryFileAge)
+	log.Printf("[EVENT_PUBLISHER_SCHEDULER] Cleaning up temporary files older than %v", s.temporaryFileAge)
 	tempResult, err := s.fileService.CleanupTemporaryFiles(ctx, s.temporaryFileAge)
 	if err != nil {
-		log.Printf("Failed to cleanup temporary files: %v", err)
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Failed to cleanup temporary files: %v", err)
 	} else {
-		log.Printf("Temporary file cleanup completed: processed=%d, deleted=%d, failed=%d",
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Temporary file cleanup completed: processed=%d, deleted=%d, failed=%d",
 			tempResult.FilesProcessed, tempResult.FilesDeleted, tempResult.FilesFailed)
 	}
 
 	// Cleanup orphaned files
-	log.Printf("Cleaning up orphaned files with grace period %v", s.orphanedGracePeriod)
+	log.Printf("[EVENT_PUBLISHER_SCHEDULER] Cleaning up orphaned files with grace period %v", s.orphanedGracePeriod)
 	orphanResult, err := s.fileService.CleanupOrphanedFiles(ctx, s.orphanedGracePeriod)
 	if err != nil {
-		log.Printf("Failed to cleanup orphaned files: %v", err)
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Failed to cleanup orphaned files: %v", err)
 	} else {
-		log.Printf("Orphaned file cleanup completed: processed=%d, deleted=%d, failed=%d",
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Orphaned file cleanup completed: processed=%d, deleted=%d, failed=%d",
 			orphanResult.FilesProcessed, orphanResult.FilesDeleted, orphanResult.FilesFailed)
 	}
 
 	// Mark orphaned files
 	orphanedCount, err := s.fileService.MarkOrphanedFiles(ctx)
 	if err != nil {
-		log.Printf("Failed to mark orphaned files: %v", err)
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Failed to mark orphaned files: %v", err)
 	} else {
-		log.Printf("Marked %d files as orphaned", orphanedCount)
+		log.Printf("[EVENT_PUBLISHER_SCHEDULER] Marked %d files as orphaned", orphanedCount)
 	}
 
 	return nil
