@@ -1,3 +1,24 @@
+//####################################################################
+// GO MODULE DEPENDENCIES - GN FARM GO SERVER
+// File này quản lý tất cả Go dependencies cho backend server
+// 
+// Các thư viện chính:
+// - gin-gonic/gin: Web framework HTTP server
+// - gorm.io/gorm: ORM cho PostgreSQL/MySQL  
+// - redis/go-redis: Client kết nối Redis
+// - cloudinary-go: Upload file lên cloud
+// - sendgrid-go: Gửi email service
+// - golang-jwt/jwt: Xác thực JWT
+// - swaggo/gin-swagger: Tạo API docs
+// - uber/zap: Structured logging
+// - spf13/viper: Quản lý config
+// - segmentio/kafka-go: Message queue
+// - stretchr/testify: Unit testing
+// 
+// Tác giả: GN Farm Development Team
+// Phiên bản: Go 1.23.0
+//####################################################################
+
 module gn-farm-go-server
 
 go 1.23.0

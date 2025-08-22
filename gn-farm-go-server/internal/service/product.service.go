@@ -1,49 +1,100 @@
+// Package service - Định nghĩa các interface cho product management và business logic
+// Quản lý tất cả các chức năng liên quan đến sản phẩm nông trại
 package service
 
 import (
-	"context"
-	"database/sql"
-	"encoding/json"
-	"fmt"
+	"context"       // Context cho operations có thể timeout/cancel
+	"database/sql"  // SQL database types
+	"encoding/json" // JSON encoding/decoding
+	"fmt"           // String formatting
 
-	"gn-farm-go-server/internal/database"
-	"gn-farm-go-server/internal/model"
-	"gn-farm-go-server/internal/vo/product"
+	"gn-farm-go-server/internal/database"   // Database models
+	"gn-farm-go-server/internal/model"      // Common data models
+	"gn-farm-go-server/internal/vo/product" // Product value objects
 )
 
+// IProductService - Interface chính cho quản lý sản phẩm
+// Cung cấp đầy đủ các chức năng CRUD, tìm kiếm, lọc, và thống kê
 type IProductService interface {
+	// CreateProduct - Tạo sản phẩm mới với thông tin chi tiết
 	CreateProduct(ctx context.Context, in *product.CreateProductRequest) (codeResult int, out product.ProductResponse, err error)
+	
+	// GetProduct - Lấy thông tin chi tiết sản phẩm theo ID
 	GetProduct(ctx context.Context, id int32) (codeResult int, out product.ProductResponse, err error)
+	
+	// ListProducts - Lấy danh sách sản phẩm với phân trang
 	ListProducts(ctx context.Context, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[product.ProductResponse], err error)
+	
+	// ListProductsWithFilter - Lấy danh sách sản phẩm có lọc theo loại và loại phụ
 	ListProductsWithFilter(ctx context.Context, productType *int32, subProductType *int32, input *model.PaginationRequest) (codeResult int, out *model.PaginatedResponse[product.ProductResponse], err error)
+	
+	// UpdateProduct - Cập nhật thông tin sản phẩm
 	UpdateProduct(ctx context.Context, id int32, in *product.UpdateProductRequest) (codeResult int, out product.ProductResponse, err error)
+	
+	// DeleteProduct - Xóa sản phẩm khỏi hệ thống
 	DeleteProduct(ctx context.Context, id int32) (codeResult int, err error)
+	
+	// SearchProducts - Tìm kiếm sản phẩm theo từ khóa
 	SearchProducts(ctx context.Context, query string, limit, offset int32) (codeResult int, out []product.ProductResponse, err error)
+	
+	// FilterProducts - Lọc sản phẩm theo các tiêu chí phức tạp
 	FilterProducts(ctx context.Context, in *product.FilterProductsRequest) (codeResult int, out []product.ProductResponse, err error)
+	
+	// GetProductStats - Lấy thống kê tổng quan về sản phẩm
 	GetProductStats(ctx context.Context) (codeResult int, out product.ProductStats, err error)
+	
+	// BulkUpdateProducts - Cập nhật hàng loạt nhiều sản phẩm
 	BulkUpdateProducts(ctx context.Context, in []product.UpdateProductRequest) (codeResult int, out []product.ProductResponse, err error)
 }
 
 // Các interface này được giữ lại để tương thích với code hiện tại
 // nhưng triển khai sẽ được cập nhật để sử dụng ProductType
+
+// MushroomService - Interface quản lý sản phẩm nấm (legacy)
+// Đã deprecated, nên sử dụng IProductService với productType = 1
 type MushroomService interface {
+	// CreateMushroom - Tạo sản phẩm nấm mới
 	CreateMushroom(ctx context.Context, name sql.NullString) (*database.Product, error)
+	
+	// GetMushroom - Lấy thông tin sản phẩm nấm theo ID
 	GetMushroom(ctx context.Context, id int32) (*database.Product, error)
+	
+	// UpdateMushroom - Cập nhật thông tin sản phẩm nấm
 	UpdateMushroom(ctx context.Context, params interface{}) (*database.Product, error)
+	
+	// DeleteMushroom - Xóa sản phẩm nấm
 	DeleteMushroom(ctx context.Context, id int32) error
 }
 
+// VegetableService - Interface quản lý sản phẩm rau củ (legacy)
+// Đã deprecated, nên sử dụng IProductService với productType = 2
 type VegetableService interface {
+	// CreateVegetable - Tạo sản phẩm rau củ mới
 	CreateVegetable(ctx context.Context, name sql.NullString) (*database.Product, error)
+	
+	// GetVegetable - Lấy thông tin sản phẩm rau củ theo ID
 	GetVegetable(ctx context.Context, id int32) (*database.Product, error)
+	
+	// UpdateVegetable - Cập nhật thông tin sản phẩm rau củ
 	UpdateVegetable(ctx context.Context, params interface{}) (*database.Product, error)
+	
+	// DeleteVegetable - Xóa sản phẩm rau củ
 	DeleteVegetable(ctx context.Context, id int32) error
 }
 
+// BonsaiService - Interface quản lý sản phẩm bonsai (legacy)
+// Đã deprecated, nên sử dụng IProductService với productType = 3
 type BonsaiService interface {
+	// CreateBonsai - Tạo sản phẩm bonsai mới
 	CreateBonsai(ctx context.Context, name sql.NullString) (*database.Product, error)
+	
+	// GetBonsai - Lấy thông tin sản phẩm bonsai theo ID
 	GetBonsai(ctx context.Context, id int32) (*database.Product, error)
+	
+	// UpdateBonsai - Cập nhật thông tin sản phẩm bonsai
 	UpdateBonsai(ctx context.Context, params interface{}) (*database.Product, error)
+	
+	// DeleteBonsai - Xóa sản phẩm bonsai
 	DeleteBonsai(ctx context.Context, id int32) error
 }
 

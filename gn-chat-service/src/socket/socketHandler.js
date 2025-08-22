@@ -1,48 +1,57 @@
-const jwt = require("jsonwebtoken")
-const { getRedisClient, isRedisConnected } = require("../config/redis")
-const Message = require("../models/message.model")
-const Conversation = require("../models/conversation.model")
-const { getUserInfo } = require("../services/user.service")
-const s3Service = require("../services/s3-storage.service")
+// Xử lý Socket.IO cho real-time communication
+const jwt = require("jsonwebtoken") // Xác thực JWT token
+const { getRedisClient, isRedisConnected } = require("../config/redis") // Redis cho trạng thái user
+const Message = require("../models/message.model") // Model tin nhắn
+const Conversation = require("../models/conversation.model") // Model cuộc trò chuyện
+const { getUserInfo } = require("../services/user.service") // Lấy thông tin user
+const s3Service = require("../services/s3-storage.service") // Xử lý file
 
-// Store active connections with last activity timestamp
-const activeUsers = new Map()
+// Lưu trữ các kết nối đang hoạt động với timestamp hoạt động cuối
+const activeUsers = new Map() // Map<userId, socketId>
 
-// Cache for user info to reduce database queries
-const userInfoCache = new Map()
-const USER_CACHE_TTL = 5 * 60 * 1000 // 5 minutes in milliseconds
+// Cache thông tin người dùng để giảm truy vấn database
+const userInfoCache = new Map() // Map<cacheKey, {data, timestamp}>
+const USER_CACHE_TTL = 5 * 60 * 1000 // Thời gian sống cache: 5 phút
 
-// Cleanup interval for user cache (every 15 minutes)
+// Dọn dẹp cache người dùng mỗi 15 phút
 setInterval(() => {
   const now = Date.now()
   for (const [key, value] of userInfoCache.entries()) {
     if (now - value.timestamp > USER_CACHE_TTL) {
-      userInfoCache.delete(key)
+      userInfoCache.delete(key) // Xóa cache hết hạn
     }
   }
 }, 15 * 60 * 1000)
 
 /**
- * Socket.io connection handler
- * Manages user authentication, real-time messaging, and presence tracking
- * @param {Object} socket - Socket.io socket instance
- * @param {Object} io - Socket.io server instance (optional)
+ * Xử lý kết nối Socket.IO
+ * Quản lý:
+ * - Xác thực người dùng qua JWT token
+ * - Nhắn tin real-time giữa các người dùng
+ * - Theo dõi trạng thái online/offline
+ * - Quản lý các phòng chat (conversation rooms)
+ * - Xử lý các sự kiện: gửi tin, đọc tin, typing, v.v.
+ * @param {Object} socket - Socket.IO socket instance cho mỗi client
+ * @param {Object} io - Socket.IO server instance (không bắt buộc)
  */
 const socketHandler = async (socket, io) => {
-  console.log("New client connected:", socket.id)
+  console.log("New client connected:", socket.id) // Ghi log kết nối mới
 
-  // Authenticate user
+  // Xác thực người dùng qua JWT token
   try {
+    // Lấy token từ handshake authentication
     const token = socket.handshake.auth.token
     if (!token) {
       throw new Error("Authentication token is missing")
     }
 
+    // Kiểm tra JWT secret
     if (!process.env.JWT_SECRET) {
       console.error("JWT_SECRET environment variable is not set")
       throw new Error("Server configuration error")
     }
 
+    // Giải mã và xác thực token
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const userId = decoded.user_id
 
@@ -50,39 +59,39 @@ const socketHandler = async (socket, io) => {
       throw new Error("Invalid authentication token: missing user_id")
     }
 
-    // Check cache first before querying database
+    // Kiểm tra cache trước khi truy vấn database (tối ưu hiệu suất)
     let user = null
     const cacheKey = `user:${userId}`
     const cachedUser = userInfoCache.get(cacheKey)
 
     if (cachedUser && Date.now() - cachedUser.timestamp < USER_CACHE_TTL) {
-      user = cachedUser.data
+      user = cachedUser.data // Sử dụng dữ liệu từ cache
     } else {
-      // Get user info from PostgreSQL
+      // Lấy thông tin người dùng từ PostgreSQL
       user = await getUserInfo(userId)
       if (!user) {
         throw new Error("User not found")
       }
 
-      // Update cache
+      // Cập nhật cache
       userInfoCache.set(cacheKey, {
         data: user,
         timestamp: Date.now(),
       })
     }
 
-    // Store user connection
+    // Lưu trữ thông tin kết nối người dùng
     socket.userId = userId
     activeUsers.set(userId, socket.id)
 
-    // Update user status in Redis
+    // Cập nhật trạng thái người dùng trong Redis
     try {
       if (isRedisConnected()) {
         const redisClient = getRedisClient()
         await Promise.all([
-          redisClient.set(`user:${userId}:status`, "online"),
-          redisClient.set(`user:${userId}:socketId`, socket.id),
-          redisClient.set(`user:${userId}:lastActive`, Date.now().toString()),
+          redisClient.set(`user:${userId}:status`, "online"), // Trạng thái online
+          redisClient.set(`user:${userId}:socketId`, socket.id), // Socket ID hiện tại
+          redisClient.set(`user:${userId}:lastActive`, Date.now().toString()), // Thời điểm hoạt động cuối
         ])
       } else {
         console.warn(
@@ -91,34 +100,35 @@ const socketHandler = async (socket, io) => {
       }
     } catch (redisError) {
       console.error("Redis error when updating user status:", redisError)
-      // Continue execution - Redis errors shouldn't disconnect the user
+      // Tiếp tục thực thi - lỗi Redis không nên ngắt kết nối người dùng
     }
 
-    // Join user to their conversation rooms
+    // Tham gia các phòng chat mà người dùng đang tham gia
     const conversations = await Conversation.find({
-      "participants.userId": userId,
-      isActive: true,
+      "participants.userId": userId, // Tìm các cuộc trò chuyện có người dùng này
+      isActive: true, // Chỉ lấy những cuộc trò chuyện đang hoạt động
     })
 
+    // Tham gia tất cả các phòng chat tương ứng
     conversations.forEach((conversation) => {
       socket.join(`conversation:${conversation.conversationId}`)
     })
 
-    // Emit user online status to relevant users
+    // Thông báo cho các người dùng khác rằng người này đã online
     socket.broadcast.emit("user:status", { userId, status: "online" })
 
     console.log(`User ${userId} authenticated and connected`)
 
-    // Handle join conversation
+    // Xử lý sự kiện tham gia cuộc trò chuyện
     socket.on("conversation:join", async (data) => {
       try {
         const { conversationId } = data
 
-        // Check if user is part of the conversation
+        // Kiểm tra người dùng có quyền tham gia cuộc trò chuyện này không
         const conversation = await Conversation.findOne({
           conversationId,
-          "participants.userId": userId,
-          isActive: true,
+          "participants.userId": userId, // Phải là thành viên
+          isActive: true, // Cuộc trò chuyện phải hoạt động
         })
 
         if (!conversation) {
@@ -128,27 +138,27 @@ const socketHandler = async (socket, io) => {
           return
         }
 
+        // Tham gia phòng chat
         socket.join(`conversation:${conversationId}`)
         socket.emit("conversation:joined", { conversationId })
 
-        // Mark messages as read
-        // This will be handled by a separate event
+        // Đánh dấu tin nhắn đã đọc sẽ được xử lý bằng sự kiện riêng biệt
       } catch (error) {
         console.error("Error joining conversation:", error)
         socket.emit("error", { message: "Failed to join conversation" })
       }
     })
 
-    // Handle new message
+    // Xử lý sự kiện gửi tin nhắn mới
     socket.on("message:send", async (data) => {
       try {
         const { conversationId, content, attachments = [] } = data
 
-        // Check if user is part of the conversation
+        // Kiểm tra người dùng có quyền gửi tin trong cuộc trò chuyện này
         const conversation = await Conversation.findOne({
           conversationId,
-          "participants.userId": userId,
-          isActive: true,
+          "participants.userId": userId, // Phải là thành viên
+          isActive: true, // Cuộc trò chuyện phải hoạt động
         })
 
         if (!conversation) {
@@ -158,18 +168,18 @@ const socketHandler = async (socket, io) => {
           return
         }
 
-        // Create new message
+        // Tạo tin nhắn mới trong MongoDB
         const newMessage = new Message({
-          conversationId: conversation._id,
-          sender: userId,
-          content,
-          attachments,
-          readBy: [{ userId, readAt: new Date() }],
+          conversationId: conversation._id, // Liên kết với cuộc trò chuyện
+          sender: userId, // Người gửi
+          content, // Nội dung tin nhắn
+          attachments, // Các file đính kèm
+          readBy: [{ userId, readAt: new Date() }], // Tự động đánh dấu đã đọc cho người gửi
         })
 
         await newMessage.save()
 
-        // Update conversation with last message
+        // Cập nhật tin nhắn cuối cùng của cuộc trò chuyện
         conversation.lastMessage = {
           content,
           sender: userId,

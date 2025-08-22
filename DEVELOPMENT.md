@@ -1,4 +1,21 @@
-# Development Guide
+# Development Guide - HƯỚNG DẪN PHÁT TRIỂN
+
+```
+#####################################################################
+HƯỚNG DẪN PHÁT TRIỂN CHO GN FARM MICROSERVICES
+Tài liệu này hướng dẫn developers thiết lập và phát triển hệ thống
+
+Nội dung bao gồm:
+- Cài đặt và khởi động nhanh (Quick Start)
+- Kiến trúc hệ thống (Architecture Overview) 
+- Quy trình testing và debugging
+- Development workflow và best practices
+- Cấu trúc project và coding standards
+
+Tác giả: GN Farm Development Team
+Phiên bản: 1.0
+#####################################################################
+```
 
 ## 🚀 Quick Start
 

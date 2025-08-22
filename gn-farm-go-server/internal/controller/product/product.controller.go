@@ -1,59 +1,79 @@
+// Package product chứa các controller xử lý quản lý sản phẩm nông trại
+// Bao gồm: tạo, đọc, cập nhật, xóa sản phẩm và phân loại sản phẩm
 package product
 
 import (
-	"fmt"
-	"gn-farm-go-server/internal/model"
-	"gn-farm-go-server/internal/service"
-	"gn-farm-go-server/internal/vo/product"
-	"gn-farm-go-server/pkg/response"
+	"fmt"                                   // String formatting utilities
+	"gn-farm-go-server/internal/model"      // Data models và structs
+	"gn-farm-go-server/internal/service"    // Business logic services
+	"gn-farm-go-server/internal/vo/product" // Product value objects (requests/responses)
+	"gn-farm-go-server/pkg/response"        // Response formatting utilities
 
-	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin" // Gin web framework
 )
 
+// Các custom error types cho product operations
 var (
-	ErrProductNotFound = fmt.Errorf("product not found")
-	ErrInvalidProduct  = fmt.Errorf("invalid product data")
+	ErrProductNotFound = fmt.Errorf("không tìm thấy sản phẩm")      // Lỗi không tìm thấy sản phẩm
+	ErrInvalidProduct  = fmt.Errorf("dữ liệu sản phẩm không hợp lệ") // Lỗi dữ liệu sản phẩm không hợp lệ
 )
 
 // Các struct request cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
 // vì chúng nên được xử lý như các product_type thông qua ProductTypeController
 
+// Product - Global instance của product controller (singleton pattern)
+// Quản lý tất cả các chức năng liên quan đến sản phẩm
 var Product = new(productController)
 
+// productController - Struct controller xử lý CRUD operations cho products
+// Chứa các method: CreateProduct, GetProduct, ListProducts, UpdateProduct, DeleteProduct
 type productController struct{}
 
-// CreateProduct creates a new product
-// @Summary      Create a new product
-// @Description  Create a new product with the provided details
+// CreateProduct - Tạo sản phẩm mới trong hệ thống
+// Chức năng:
+// - Nhận thông tin sản phẩm từ request body
+// - Validate dữ liệu đầu vào (tên, loại, giá, mô tả)
+// - Tạo sản phẩm mới trong database
+// - Trả về thông tin sản phẩm đã tạo
+// @Summary      Tạo sản phẩm mới
+// @Description  Tạo sản phẩm mới với các thông tin chi tiết được cung cấp
 // @Tags         product management
 // @Accept       json
 // @Produce      json
-// @Param        payload body CreateProductRequest true "Product details"
+// @Param        payload body CreateProductRequest true "Chi tiết sản phẩm"
 // @Success      200  {object}  response.ResponseData
 // @Failure      400  {object}  response.ErrorResponseData
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product [post]
 func (c *productController) CreateProduct(ctx *gin.Context) {
+	// Parse và validate request body
 	var req product.CreateProductRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		// Trả về lỗi nếu dữ liệu request không hợp lệ
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	// Call service following user pattern
+	// Gọi service để xử lý logic tạo sản phẩm
 	codeRs, dataRs, err := service.Product.CreateProduct(ctx, &req)
 	if err != nil {
+		// Trả về lỗi nếu tạo sản phẩm thất bại
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	// Sử dụng helper function để đảm bảo tính nhất quán response
 	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 
-// GetProduct retrieves a product by ID
-// @Summary      Get a product by ID
-// @Description  Get detailed information about a product by its ID
+// GetProduct - Lấy thông tin chi tiết của một sản phẩm theo ID
+// Chức năng:
+// - Nhận product ID từ URL parameter
+// - Validate ID hợp lệ (phải là số dương)
+// - Tìm kiếm sản phẩm trong database
+// - Trả về thông tin đầy đủ của sản phẩm
+// @Summary      Lấy sản phẩm theo ID
+// @Description  Lấy thông tin chi tiết về sản phẩm theo ID của nó
 // @Tags         product management
 // @Accept       json
 // @Produce      json
@@ -64,22 +84,25 @@ func (c *productController) CreateProduct(ctx *gin.Context) {
 // @Failure      500  {object}  response.ErrorResponseData
 // @Router       /product/{id} [get]
 func (c *productController) GetProduct(ctx *gin.Context) {
+	// Parse và validate URL parameters
 	var params struct {
-		ID int32 `uri:"id" binding:"required,min=1"`
+		ID int32 `uri:"id" binding:"required,min=1"` // ID phải là số dương
 	}
 	if err := ctx.ShouldBindUri(&params); err != nil {
+		// Trả về lỗi nếu ID không hợp lệ
 		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
 		return
 	}
 
-	// Call service following user pattern
+	// Gọi service để lấy thông tin sản phẩm
 	codeRs, dataRs, err := service.Product.GetProduct(ctx, params.ID)
 	if err != nil {
+		// Trả về lỗi nếu không tìm thấy sản phẩm hoặc lỗi khác
 		response.ErrorResponse(ctx, codeRs, err.Error())
 		return
 	}
 
-	// Sử dụng helper function mới để đảm bảo tính nhất quán
+	// Sử dụng helper function để đảm bảo tính nhất quán response
 	response.SuccessResponseWithItem(ctx, codeRs, dataRs)
 }
 

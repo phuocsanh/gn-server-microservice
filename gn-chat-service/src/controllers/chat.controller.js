@@ -1,33 +1,42 @@
-const chatService = require("../services/chat.service")
-const Message = require("../models/message.model")
-const Conversation = require("../models/conversation.model")
-const { upload } = require("../middlewares/upload.middleware")
-const s3Service = require("../services/s3-storage.service")
+// Controller xử lý các chức năng liên quan đến chat và conversation
+const chatService = require("../services/chat.service") // Service xử lý logic chat
+const Message = require("../models/message.model") // Model tin nhắn
+const Conversation = require("../models/conversation.model") // Model cuộc trò chuyện
+const { upload } = require("../middlewares/upload.middleware") // Middleware upload file
+const s3Service = require("../services/s3-storage.service") // Service quản lý file storage
 
 /**
- * Create a new conversation
+ * Tạo cuộc trò chuyện mới (direct hoặc group)
+ * Chức năng:
+ * - Tạo cuộc trò chuyện 1-1 (direct) hoặc nhóm (group)
+ * - Kiểm tra và xác thực dữ liệu đầu vào
+ * - Thêm các thành viên vào cuộc trò chuyện
  * @route POST /api/chat/conversations
+ * @param {Object} req - Request chứa type, name, participants
+ * @param {Object} res - Response trả về thông tin cuộc trò chuyện mới
  */
 const createConversation = async (req, res) => {
   try {
     const { type, name, participants } = req.body
-    const userId = req.user.id
+    const userId = req.user.id // ID người dùng từ JWT token
 
-    // Validate input
+    // Kiểm tra và xác thực dữ liệu đầu vào
     if (!type || !["direct", "group"].includes(type)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid conversation type",
+        message: "Invalid conversation type", // Loại cuộc trò chuyện không hợp lệ
       })
     }
 
+    // Cuộc trò chuyện nhóm phải có tên
     if (type === "group" && !name) {
       return res.status(400).json({
         success: false,
-        message: "Group conversations require a name",
+        message: "Group conversations require a name", // Cuộc trò chuyện nhóm yêu cầu tên
       })
     }
 
+    // Kiểm tra danh sách thành viên
     if (
       !participants ||
       !Array.isArray(participants) ||
@@ -35,11 +44,11 @@ const createConversation = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: "Participants are required",
+        message: "Participants are required", // Danh sách thành viên là bắt buộc
       })
     }
 
-    // Create conversation
+    // Tạo cuộc trò chuyện thông qua service
     const conversation = await chatService.createConversation(
       { type, name, participants },
       userId
@@ -59,17 +68,24 @@ const createConversation = async (req, res) => {
 }
 
 /**
- * Get conversations for the current user
+ * Lấy danh sách các cuộc trò chuyện của người dùng hiện tại
+ * Chức năng:
+ * - Lấy tất cả cuộc trò chuyện mà người dùng tham gia
+ * - Hỗ trợ phân trang (limit, offset)
+ * - Sắp xếp theo thời gian hoạt động gần nhất
  * @route GET /api/chat/conversations
+ * @param {Object} req - Request chứa query parameters (limit, offset)
+ * @param {Object} res - Response trả về danh sách cuộc trò chuyện
  */
 const getUserConversations = async (req, res) => {
   try {
-    const userId = req.user.id
-    const { limit, offset } = req.query
+    const userId = req.user.id // ID người dùng từ JWT token
+    const { limit, offset } = req.query // Tham số phân trang
 
+    // Gọi service để lấy danh sách cuộc trò chuyện
     const conversations = await chatService.getUserConversations(userId, {
-      limit: limit ? parseInt(limit) : 20,
-      offset: offset ? parseInt(offset) : 0,
+      limit: limit ? parseInt(limit) : 20, // Mặc định 20 cuộc trò chuyện
+      offset: offset ? parseInt(offset) : 0, // Bắt đầu từ vị trí 0
     })
 
     res.status(200).json({
@@ -86,19 +102,26 @@ const getUserConversations = async (req, res) => {
 }
 
 /**
- * Get conversation details
+ * Lấy thông tin chi tiết của một cuộc trò chuyện
+ * Chức năng:
+ * - Lấy thông tin cuộc trò chuyện (tên, loại, thành viên)
+ * - Lấy thông tin chi tiết của các thành viên
+ * - Lấy trạng thái online/offline của các thành viên
+ * - Kiểm tra quyền truy cập của người dùng
  * @route GET /api/chat/conversations/:conversationId
+ * @param {Object} req - Request chứa conversationId trong params
+ * @param {Object} res - Response trả về thông tin chi tiết cuộc trò chuyện
  */
 const getConversationDetails = async (req, res) => {
   try {
-    const { conversationId } = req.params
-    const userId = req.user.id
+    const { conversationId } = req.params // ID cuộc trò chuyện từ URL
+    const userId = req.user.id // ID người dùng hiện tại
 
-    // Find conversation
+    // Tìm cuộc trò chuyện và kiểm tra quyền truy cập
     const conversation = await Conversation.findOne({
       conversationId,
-      "participants.userId": userId,
-      isActive: true,
+      "participants.userId": userId, // Kiểm tra người dùng có trong danh sách thành viên
+      isActive: true, // Chỉ lấy cuộc trò chuyện đang hoạt động
     })
 
     if (!conversation) {
@@ -108,34 +131,36 @@ const getConversationDetails = async (req, res) => {
       })
     }
 
-    // Get participant details
+    // Lấy danh sách ID của các thành viên
     const participantIds = conversation.participants.map((p) => p.userId)
     const { getUsersInfo, getUsersStatus } = require("../services/user.service")
 
+    // Lấy thông tin và trạng thái của các thành viên song song
     const [usersInfo, usersStatus] = await Promise.all([
-      getUsersInfo(participantIds),
-      getUsersStatus(participantIds),
+      getUsersInfo(participantIds), // Thông tin cơ bản (tên, avatar)
+      getUsersStatus(participantIds), // Trạng thái online/offline
     ])
 
-    // Format response
+    // Định dạng lại dữ liệu thành viên với thông tin chi tiết
     const formattedParticipants = conversation.participants.map((p) => {
       const userInfo = usersInfo.find((u) => u.user_id === p.userId) || {}
       return {
         ...p.toObject(),
         userInfo: {
           id: userInfo.user_id,
-          name: userInfo.user_nickname || userInfo.user_account,
+          name: userInfo.user_nickname || userInfo.user_account, // Ưu tiên nickname, nếu không có thì dùng account
           avatar: userInfo.user_avatar,
         },
-        status: usersStatus[p.userId] || "offline",
+        status: usersStatus[p.userId] || "offline", // Mặc định offline nếu không có thông tin
       }
     })
 
+    // Trả về kết quả với thông tin cuộc trò chuyện và thành viên đã được format
     res.status(200).json({
       success: true,
       data: {
         ...conversation.toObject(),
-        participants: formattedParticipants,
+        participants: formattedParticipants, // Thành viên với thông tin chi tiết
       },
     })
   } catch (error) {
@@ -148,21 +173,29 @@ const getConversationDetails = async (req, res) => {
 }
 
 /**
- * Get messages for a conversation
+ * Lấy danh sách tin nhắn của một cuộc trò chuyện
+ * Chức năng:
+ * - Lấy tin nhắn theo thời gian (mới nhất trước)
+ * - Hỗ trợ phân trang với before (cursor-based pagination)
+ * - Kiểm tra quyền truy cập của người dùng
+ * - Lấy thông tin người gửi cho mỗi tin nhắn
  * @route GET /api/chat/conversations/:conversationId/messages
+ * @param {Object} req - Request chứa conversationId và query params (limit, before)
+ * @param {Object} res - Response trả về danh sách tin nhắn
  */
 const getConversationMessages = async (req, res) => {
   try {
-    const { conversationId } = req.params
-    const userId = req.user.id
-    const { limit, before } = req.query
+    const { conversationId } = req.params // ID cuộc trò chuyện
+    const userId = req.user.id // ID người dùng hiện tại
+    const { limit, before } = req.query // Tham số phân trang
 
+    // Gọi service để lấy tin nhắn với kiểm tra quyền
     const messages = await chatService.getConversationMessages(
       conversationId,
       userId,
       {
-        limit: limit ? parseInt(limit) : 50,
-        before,
+        limit: limit ? parseInt(limit) : 50, // Mặc định 50 tin nhắn
+        before, // Timestamp để lấy tin nhắn cũ hơn
       }
     )
 
@@ -180,16 +213,24 @@ const getConversationMessages = async (req, res) => {
 }
 
 /**
- * Send a message to a conversation
+ * Gửi tin nhắn vào cuộc trò chuyện
+ * Chức năng:
+ * - Gửi tin nhắn văn bản hoặc file đính kèm
+ * - Kiểm tra quyền tham gia cuộc trò chuyện
+ * - Tự động đánh dấu đã đọc cho người gửi
+ * - Cập nhật tin nhắn cuối cùng của cuộc trò chuyện
+ * - Lấy thông tin người gửi để trả về
  * @route POST /api/chat/conversations/:conversationId/messages
+ * @param {Object} req - Request chứa conversationId, content, attachments
+ * @param {Object} res - Response trả về thông tin tin nhắn đã gửi
  */
 const sendMessage = async (req, res) => {
   try {
-    const { conversationId } = req.params
-    const { content, attachments } = req.body
-    const userId = req.user.id
+    const { conversationId } = req.params // ID cuộc trò chuyện
+    const { content, attachments } = req.body // Nội dung và file đính kèm
+    const userId = req.user.id // ID người gửi
 
-    // Validate input
+    // Kiểm tra tin nhắn phải có nội dung hoặc file đính kèm
     if (!content && (!attachments || attachments.length === 0)) {
       return res.status(400).json({
         success: false,
@@ -197,7 +238,7 @@ const sendMessage = async (req, res) => {
       })
     }
 
-    // Check if user is part of the conversation
+    // Kiểm tra người dùng có phải là thành viên của cuộc trò chuyện
     const conversation = await Conversation.findOne({
       conversationId,
       "participants.userId": userId,

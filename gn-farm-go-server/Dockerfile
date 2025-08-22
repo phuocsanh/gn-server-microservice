@@ -1,6 +1,13 @@
+# ===== DOCKERFILE CHO GN-FARM-GO-SERVER (GOLANG) =====
+# Container hóa ứng dụng Go server với hot reloading cho development
+# Bao gồm các tools cần thiết: Air, Goose, Swag, CompileDaemon
+
+# Sử dụng Go image chính thức với Alpine Linux
 FROM golang:alpine
 
-# Cài đặt các công cụ cần thiết
+# Cài đặt các công cụ hệ thống cần thiết
+# - git: Download dependencies từ Git repositories
+# - curl: Health check và debugging
 RUN apk add --no-cache git curl
 
 # Cài đặt swag và thêm vào PATH

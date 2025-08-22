@@ -1,3 +1,4 @@
+// Package middlewares - Chứa các middleware xử lý request/response
 package middlewares
 
 import (
@@ -6,24 +7,28 @@ import (
 	"strconv"
 	"strings"
 
-	"go.uber.org/zap"
 	"gn-farm-go-server/global"
 	"gn-farm-go-server/internal/utils/auth"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
 
-// JWTAuth xác thực JWT token từ header Authorization
+// JWTAuth - Middleware xác thực JWT token từ header Authorization
+// Đây là phiên bản cải tiến, hỗ trợ các route public và error handling tốt hơn
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Bỏ qua xác thực cho các route public
+		// Bỏ qua xác thực cho các route public để tối ưu performance
 		if isPublicRoute(c.Request.URL.Path) {
 			c.Next()
 			return
 		}
 
+		// Trích xuất Bearer token từ Authorization header
 		tokenString, valid := auth.ExtractBearerToken(c)
 		if !valid {
+			// Trả về lỗi 401 nếu không có token hoặc token không hợp lệ
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":  http.StatusUnauthorized,
 				"error": "Missing or invalid token",
@@ -31,9 +36,10 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		// Xác thực token
+		// Xác thực và decode JWT token để lấy thông tin người dùng
 		claims, err := auth.VerifyTokenSubject(tokenString)
 		if err != nil {
+			// Ghi log lỗi và trả về unauthorized
 			global.Logger.Error("Token verification failed", zap.Error(err))
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":  http.StatusUnauthorized,
@@ -42,28 +48,32 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		// Lưu thông tin user vào context
+		// Lưu thông tin user vào Gin context để các handler sau có thể sử dụng
 		c.Set("userID", claims.Subject)
 		c.Next()
 	}
 }
 
-// JWTAuthMiddleware là alias của JWTAuth để tương thích ngược
+// JWTAuthMiddleware - Là alias của JWTAuth để tương thích ngược
+// Sử dụng để không phải thay đổi code cũ khi migrate
 func JWTAuthMiddleware() gin.HandlerFunc {
 	return JWTAuth()
 }
 
-// isPublicRoute kiểm tra xem route có phải là public không
+// isPublicRoute - Kiểm tra xem route có phải là public không
+// Các route public không cần xác thực JWT token
 func isPublicRoute(path string) bool {
+	// Danh sách các route công khai không cần authentication
 	publicRoutes := []string{
-		"/api/v1/auth/login",
-		"/api/v1/auth/register",
-		"/api/v1/auth/refresh-token",
-		"/api/v1/health",
-		"/api/v1/ready",
-		"/api/v1/live",
+		"/api/v1/auth/login",        // Đăng nhập
+		"/api/v1/auth/register",     // Đăng ký
+		"/api/v1/auth/refresh-token", // Làm mới token
+		"/api/v1/health",            // Kiểm tra sức khỏe hệ thống
+		"/api/v1/ready",             // Kiểm tra sẵn sàng
+		"/api/v1/live",              // Kiểm tra hoạt động
 	}
 
+	// Kiểm tra path hiện tại có trong danh sách public routes không
 	for _, route := range publicRoutes {
 		if path == route {
 			return true

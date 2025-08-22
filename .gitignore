@@ -1,34 +1,54 @@
+#####################################################################
+# GITIGNORE CHO GN FARM MICROSERVICES - LOẠI TRỪ KHỊI VERSION CONTROL
+# File này chỉ định các file/folder nào KHÔNG được commit vào Git
+# Bao gồm cả Go server và Node.js chat service
+#
+# Mục đích:
+# - Bảo vệ sensitive data (passwords, keys, tokens)
+# - Loại trừ generated files và build artifacts
+# - Giữ repo sạch sẽ, chỉ chứa source code
+# - Tránh conflicts giữa các developer environments
+#
+# Tác giả: GN Farm Development Team
+#####################################################################
+
 # GN Farm Microservices - Combined .gitignore
 
-# OS specific files
-.DS_Store
-Thumbs.db
+# ===== HỆ ĐIỀU HÀNH & IDE =====
+# File tự động sinh ra bởi OS và IDE
+.DS_Store                    # macOS Finder metadata
+Thumbs.db                    # Windows thumbnail cache
 
-# IDE files
-.idea/
-.vscode/
-*.sublime-project
-*.sublime-workspace
+# IDE files - Các file của IDE/Editor
+.idea/                       # JetBrains IDEs (GoLand, WebStorm)
+.vscode/                     # Visual Studio Code settings
+*.sublime-project           # Sublime Text project files
+*.sublime-workspace         # Sublime Text workspace
 
-# Logs
-*.log
-npm-debug.log*
-logs/
-storages/logs/
+# ===== LOGS & DEBUGGING =====
+# File logs và debugging không nên commit
+*.log                        # Tất cả file log
+npm-debug.log*              # NPM debug logs
+logs/                        # Thư mục logs
+storages/logs/               # App-specific logs directory
 
-# Environment variables
-#.env
+# ===== ENVIRONMENT VARIABLES =====
+# File chứa thông tin nhạy cảm
+#.env                        # Uncomment để loại trừ .env files
 
-# Go specific (gn-farm-go-server)
-docs/
-cmd/cli/
-config/production.yaml
-tmp/
+# ===== GO SERVER SPECIFIC FILES =====
+# Các file riêng của Go backend
+docs/                        # Generated Swagger docs
+cmd/cli/                     # CLI tools (development only)
+config/production.yaml       # Production config (sensitive)
+tmp/                         # Temporary files
 
-# Node.js specific (gn-chat-service)
-node_modules/
-dist/
-build/
+# ===== NODE.JS CHAT SERVICE FILES =====
+# Các file riêng của Node.js service
+node_modules/                # NPM dependencies
+dist/                        # Built files
+build/                       # Build output
 
-# Build output
-bin/
+# ===== BUILD OUTPUT =====
+# Compiled binaries và artifacts
+bin/                         # Binary files

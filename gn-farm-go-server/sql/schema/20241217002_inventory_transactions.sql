@@ -1,3 +1,25 @@
+/*
+#####################################################################
+MIGRATION: INVENTORY TRANSACTIONS - HỆ THỐNG GIAO DỊCH KHO
+Ngày tạo: 2024-12-17
+Phiên bản: 002 (Inventory Transaction System)
+
+Mục đích:
+- Triển khai hệ thống theo dõi giao dịch kho chi tiết
+- Tính giá trị tồn kho theo phương pháp giá trung bình gia quyền
+- Hỗ trợ FIFO (First In First Out) cho quản lý lô hàng
+- Theo dõi lịch sử nhập/xuất kho đầy đủ
+
+Các tính năng chính:
+- Ghi lại mọi giao dịch nhập/xuất/điều chỉnh
+- Tính toán giá vốn trung bình tự động
+- Quản lý lô hàng và hạn sử dụng
+- Audit trail đầy đủ cho báo cáo tài chính
+
+Tác giả: GN Farm Development Team
+#####################################################################
+*/
+
 -- +goose Up
 -- Bảng giao dịch kho chi tiết để tính giá trung bình gia quyền
 CREATE TABLE IF NOT EXISTS inventory_transactions (

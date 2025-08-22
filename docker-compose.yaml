@@ -1,57 +1,92 @@
+#####################################################################
+# DOCKER COMPOSE - GN FARM MICROSERVICES STACK
+# File này định nghĩa toàn bộ kiến trúc microservices cho GN Farm
+#
+# Kiến trúc hệ thống:
+# ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+# │   Go Server     │    │  Chat Service   │    │    Kafka UI     │
+# │   (Backend)     │    │   (Node.js)     │    │  (Monitoring)   │
+# │   Port: 8002    │    │   Port: 3001    │    │   Port: 8080    │
+# └─────────┬───────┘    └─────────┬───────┘    └─────────────────┘
+#           │                      │
+#           └──────────┬───────────┘
+#                      │
+# ┌─────────────────┐  │  ┌─────────────────┐    ┌─────────────────┐
+# │   PostgreSQL    │  │  │     Redis       │    │    MongoDB      │
+# │ (Main Database) │  │  │   (Cache/RT)    │    │  (Chat Data)    │
+# │   Port: 5432    │  │  │   Port: 6381    │    │  Port: 27017    │
+# └─────────────────┘  │  └─────────────────┘    └─────────────────┘
+#                      │
+#                ┌─────────────────┐    ┌─────────────────┐
+#                │     Kafka       │    │   Zookeeper     │
+#                │ (Message Queue) │    │ (Coordination)  │
+#                │   Port: 9092    │    │   Port: 2181    │
+#                └─────────────────┘    └─────────────────┘
+#
+# Tác giả: GN Farm Development Team
+# Phiên bản: Docker Compose 3.8
+# Cách sử dụng: docker-compose up -d
+#####################################################################
+
 version: "3.8"
 
 services:
-  # Database services
+  # ===== DATABASE SERVICES - CÁC DỊCH VỤ CƠ SỜ DỮU LIỆU =====
+  # PostgreSQL - Cơ sở dữ liệu chính cho backend Go server
   postgres:
-    image: postgres:15
-    container_name: postgres_gn_farm
+    image: postgres:15 # Sử dụng PostgreSQL phiên bản 15 (stable LTS)
+    container_name: postgres_gn_farm # Tên container cho dễ quản lý
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: GO_GN_FARM
+      POSTGRES_USER: postgres # Username mặc định
+      POSTGRES_PASSWORD: postgres # Password (nên thay đổi trong production)
+      POSTGRES_DB: GO_GN_FARM # Database chính cho ứng dụng
     ports:
-      - "5432:5432"
+      - "5432:5432" # Expose port 5432 ra ngoài
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data # Lưu dữ liệu vào volume
     networks:
-      - gn_farm_network
-    healthcheck:
+      - gn_farm_network # Kết nối vào mạng chung
+    healthcheck: # Kiểm tra sức khỏe service
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 10s # Kiểm tra mỗi 10 giây
+      timeout: 5s # Timeout 5 giây
+      retries: 5 # Thử lại tối đa 5 lần
+
+  # Redis - Cache và session store cho real-time features
 
   redis:
-    image: redis:7.4
-    container_name: redis_gn_farm
+    image: redis:7.4 # Redis 7.4 cho performance tốt nhất
+    container_name: redis_gn_farm # Tên container
     ports:
-      - "6381:6379"
+      - "6381:6379" # Map port 6379 thành 6381 để tránh conflict
     volumes:
-      - redis_data:/data
+      - redis_data:/data # Lưu dữ liệu cache vào volume
     networks:
       - gn_farm_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "ping"] # Test kết nối Redis
       interval: 10s
       timeout: 5s
       retries: 3
 
+  # MongoDB - Lưu trữ dữ liệu chat, tin nhắn real-time
   mongodb:
-    image: mongo:6.0
+    image: mongo:6.0 # MongoDB 6.0 stable
     container_name: mongo_gn_farm
     ports:
-      - "27017:27017"
+      - "27017:27017" # Port mặc định MongoDB
     volumes:
-      - mongodb_data:/data/db
+      - mongodb_data:/data/db # Lưu document vào volume
     networks:
       - gn_farm_network
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"] # Test MongoDB
       interval: 10s
       timeout: 5s
       retries: 3
 
-  # Kafka services
+  # ===== KAFKA MESSAGE QUEUE SERVICES - DỊCH VỤ HÀNG ĐỢI TIN NHẮN =====
+  # Zookeeper - Điều phối và quản lý Kafka cluster
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
@@ -104,7 +139,8 @@ services:
     networks:
       - gn_farm_network
 
-  # Application services
+  # ===== APPLICATION SERVICES - CÁC DỊCH VỤ ỨNG DỤNG =====
+  # Go Server - Backend chính xử lý business logic, API, authentication
   go_server:
     container_name: backend_go_gn_farm
     build:
@@ -206,13 +242,17 @@ services:
       - VIDEO_CRF=${VIDEO_CRF:-23}
       - VIDEO_MAX_SIZE_MB=${VIDEO_MAX_SIZE_MB:-50}
 
+# ===== DOCKER VOLUMES - LƯU TRỮU DỮU LIỆU BỀN VỮNG =====
+# Các volume để lưu trữ dữ liệu khi container restart
 volumes:
-  postgres_data:
-  redis_data:
-  broker_data:
-  mongodb_data:
-  chat_node_modules:
+  postgres_data: # Dữ liệu PostgreSQL - users, inventory, transactions
+  redis_data: # Dữ liệu Redis - cache, sessions, real-time data
+  broker_data: # Dữ liệu Kafka - message queue, events
+  mongodb_data: # Dữ liệu MongoDB - chat messages, conversations
+  chat_node_modules: # Node modules cho chat service (tăng tốc độ build)
 
+# ===== DOCKER NETWORKS - MẠNG KẾT NỐI =====
+# Mạng chung cho tất cả services giao tiếp với nhau
 networks:
-  gn_farm_network:
-    driver: bridge
+  gn_farm_network: # Mạng bridge cho toàn bộ microservices
+    driver: bridge # Sử dụng bridge driver (mặc định, phù hợp cho dev)

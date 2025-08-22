@@ -1,6 +1,21 @@
+<!--
+===== GN FARM CHAT SERVICE - DỲCH VỤ CHAT REAL-TIME =====
+Tài liệu này mô tả dịch vụ chat microservice cho ứng dụng GN Farm
+Công nghệ sử dụng: Node.js, Express, Socket.IO, MongoDB, PostgreSQL
+Chức năng chính:
+- Nhắn tin real-time với Socket.IO
+- Quản lý cuộc trò chuyện nhóm và cá nhân
+- Upload và xử lý file đính kèm (hình ảnh, video, âm thanh)
+- Theo dõi trạng thái người dùng online/offline
+- Nén và tối ưu hóa file tự động
+- Tích hợp AWS S3 cho lưu trữ file
+-->
+
 # GN Farm Chat Service
 
-Chat microservice for GN Farm application built with Node.js, Express, Socket.IO, MongoDB, and PostgreSQL.
+## Tổng quan (Overview)
+
+Dịch vụ chat microservice cho ứng dụng GN Farm được xây dựng bằng Node.js, Express, Socket.IO, MongoDB và PostgreSQL.
 
 ## Features
 

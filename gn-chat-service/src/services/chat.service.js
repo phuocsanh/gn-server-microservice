@@ -1,45 +1,52 @@
-const { getPool } = require("../config/postgres")
-const Message = require("../models/message.model")
-const Conversation = require("../models/conversation.model")
-const { getUsersInfo } = require("./user.service")
+// Chat service - xử lý toàn bộ logic liên quan đến chat và conversation
+const { getPool } = require("../config/postgres") // PostgreSQL connection pool
+const Message = require("../models/message.model") // MongoDB Message model
+const Conversation = require("../models/conversation.model") // MongoDB Conversation model
+const { getUsersInfo } = require("./user.service") // Service lấy thông tin người dùng
 
 /**
- * Create a new conversation
- * @param {Object} data - Conversation data
- * @param {string} data.type - Conversation type ('direct' or 'group')
- * @param {string} data.name - Conversation name (for group chats)
- * @param {Array} data.participants - Array of participant user IDs
- * @param {number} creatorId - User ID of the conversation creator
- * @returns {Promise<Object>} - Created conversation
+ * Tạo cuộc trò chuyện mới (direct hoặc group)
+ * Chức năng:
+ * - Tạo cuộc trò chuyện 1-1 (direct) hoặc nhóm (group)
+ * - Kiểm tra cuộc trò chuyện direct đã tồn tại chưa
+ * - Tự động thêm người tạo làm admin
+ * - Gắn role phù hợp cho các thành viên
+ * - Lấy thông tin chi tiết của các thành viên
+ * @param {Object} data - Dữ liệu cuộc trò chuyện
+ * @param {string} data.type - Loại cuộc trò chuyện ('direct' hoặc 'group')
+ * @param {string} data.name - Tên cuộc trò chuyện (đối với group chat)
+ * @param {Array} data.participants - Mảng các user ID tham gia
+ * @param {number} creatorId - ID người tạo cuộc trò chuyện
+ * @returns {Promise<Object>} - Cuộc trò chuyện đã được tạo
  */
 const createConversation = async (data, creatorId) => {
   try {
     const { type, name, participants } = data
 
-    // Ensure creator is included in participants
+    // Đảm bảo người tạo luôn có trong danh sách thành viên
     if (!participants.includes(creatorId)) {
       participants.push(creatorId)
     }
 
-    // For direct conversations, ensure there are at least 1 participant (plus creator)
+    // Đối với cuộc trò chuyện direct, phải có ít nhất 1 người khác (cộng thêm creator)
     if (type === "direct" && participants.length < 1) {
       throw new Error("Direct conversations must have at least one participant")
     }
 
-    // Check if direct conversation already exists
+    // Kiểm tra cuộc trò chuyện direct đã tồn tại chưa
     if (type === "direct") {
       const existingConversation = await Conversation.findOne({
         type: "direct",
-        "participants.userId": { $all: participants },
+        "participants.userId": { $all: participants }, // Tất cả participants phải có mặt
         isActive: true,
       })
 
       if (existingConversation) {
-        return existingConversation
+        return existingConversation // Trả về cuộc trò chuyện đã tồn tại
       }
     }
 
-    // Generate a unique conversation ID
+    // Tạo ID duy nhất cho cuộc trò chuyện
     const conversationId = `conv_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`

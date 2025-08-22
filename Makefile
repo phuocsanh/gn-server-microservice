@@ -1,33 +1,72 @@
+#####################################################################
+# MAKEFILE CHO GN FARM MICROSERVICES - BUILD & DEVELOPMENT AUTOMATION
+# File này chứa tất cả commands để phát triển và vận hành microservices
+#
+# Mục đích:
+# - Tự động hóa quy trình development với hot reloading
+# - Quản lý Docker containers cho all services
+# - Build, test, và deploy toàn bộ hệ thống
+# - Cung cấp shortcuts cho common tasks
+#
+# Services được quản lý:
+# - Go Backend Server (port 8002)
+# - Node.js Chat Service (port 3000) 
+# - PostgreSQL Database (port 5432)
+# - MongoDB (port 27017)
+# - Redis Cache (port 6381)
+# - Kafka + Zookeeper (ports 9092, 2181)
+# - Kafka UI (port 8080)
+#
+# Cách sử dụng: make <command>
+# Ví dụ: make dev, make start, make help
+#
+# Tác giả: GN Farm Development Team
+# Phiên bản: 1.0
+#####################################################################
+
 # Makefile for GN Farm Microservices
 
-# Docker commands
+# ===== DOCKER COMMANDS - LỆNH QUẢN LÝ CONTAINERS =====
+# Các lệnh cơ bản để quản lý Docker containers
 docker_up:
+	# Khởi động tất cả containers trong chế độ detached
 	docker compose up -d
 
 docker_down:
+	# Dừng và xóa tất cả containers
 	docker compose down
 
 docker_build:
+	# Build lại images và khởi động containers
 	docker compose up -d --build
 
 docker_logs:
+	# Xem logs từ tất cả containers theo thời gian thực
 	docker compose logs -f
 
 docker_restart:
+	# Restart tất cả containers đang chạy
 	docker compose restart
+
+# ===== INDIVIDUAL SERVICE COMMANDS - LỆNH CHO TỬNG SERVICE =====
+# Các lệnh chạy riêng lẻ từng service cho development
 
 # Go server commands
 go_dev:
+	# Chạy Go server ở chế độ development với hot reload
 	cd gn-farm-go-server && make dev
 
-# Chat service commands
+# Chat service commands  
 chat_dev:
+	# Chạy Node.js chat service với nodemon hot reload
 	cd gn-chat-service && npm run dev
 
 chat_test:
+	# Chạy Jest tests cho chat service
 	cd gn-chat-service && npm test
 
 chat_test_coverage:
+	# Chạy tests với báo cáo coverage cho chat service
 	cd gn-chat-service && npm run test:coverage
 
 # Start all services in development mode with hot reloading

@@ -1,3 +1,24 @@
+/*
+#####################################################################
+USER VERIFICATION QUERIES - CÁC QUERY XÁC THỰC NGƯỜI DÙNG
+File: 001-user-verify.sql
+
+Mục đích:
+- Xử lý OTP verification cho đăng ký tài khoản
+- Quản lý trạng thái xác thực email/phone
+- Theo dõi quá trình verification của người dùng
+
+Các chức năng:
+- Lấy OTP hợp lệ cho xác thực
+- Cập nhật trạng thái đã xác thực
+- Thêm OTP mới
+- Kiểm tra thông tin OTP
+- Cập nhật OTP theo verify key
+
+Tác giả: GN Farm Development Team
+#####################################################################
+*/
+
 -- name: GetValidOTP :one
 SELECT verify_otp, verify_key_hash, verify_key, verify_id
 FROM user_verifications

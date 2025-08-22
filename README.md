@@ -1,6 +1,17 @@
+<!--
+===== GN FARM MICROSERVICES - TÀI LIỆU DỰ ÁN =====
+Tài liệu này cung cấp hướng dẫn đầy đủ về hệ thống microservices GN Farm
+Bao gồm các chức năng:
+- Quản lý sản phẩm và kho hàng (Go server)
+- Hệ thống chat real-time (Node.js service)
+- Cơ sở dữ liệu đa dạng (PostgreSQL, MongoDB, Redis)
+- Container hóa với Docker và Docker Compose
+-->
+
 # GN Farm Microservices
 
 Hệ thống microservices cho GN Farm bao gồm:
+
 - **gn-farm-go-server**: Backend Go cho quản lý người dùng và sản phẩm
 - **gn-chat-service**: Dịch vụ chat real-time bằng Node.js
 

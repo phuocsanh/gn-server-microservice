@@ -1,142 +1,178 @@
-const fs = require('fs');
-const { promisify } = require('util');
-const sharp = require('sharp');
-const ffmpeg = require('fluent-ffmpeg');
+// Utility functions xử lý file và lấy metadata
+const fs = require("fs") // File system operations
+const { promisify } = require("util") // Convert callback functions thành promises
+const sharp = require("sharp") // Thư viện xử lý hình ảnh (metadata, resize, compress)
+const ffmpeg = require("fluent-ffmpeg") // Thư viện xử lý video/audio (metadata, thumbnail, compress)
 
 /**
- * Get metadata for a file based on its type
- * @param {string} filePath - Path to the file
- * @param {string} fileType - Type of file ('image', 'video', 'audio', 'document')
- * @returns {Promise<Object>} - Metadata object
+ * Lấy metadata cho file dựa trên loại file
+ * Chức năng:
+ * - Phân tích và trích xuất thông tin chi tiết từ file
+ * - Tạo thumbnail cho video
+ * - Lấy kích thước (width/height) cho hình ảnh
+ * - Lấy thời lượng cho video/audio
+ * - Xử lý lỗi an toàn (không crash app)
+ * @param {string} filePath - Đường dẫn đến file cần phân tích
+ * @param {string} fileType - Loại file ('image', 'video', 'audio', 'document')
+ * @returns {Promise<Object>} - Object chứa metadata (width, height, duration, thumbnailUrl, etc.)
  */
 const getMetadata = async (filePath, fileType) => {
   try {
-    const metadata = {};
-    
+    const metadata = {} // Object chứa các thông tin metadata
+
+    // Xử lý metadata khác nhau cho từng loại file
     switch (fileType) {
-      case 'image':
-        // Get image dimensions
-        const imageInfo = await sharp(filePath).metadata();
-        metadata.width = imageInfo.width;
-        metadata.height = imageInfo.height;
-        
-        // Generate thumbnail if needed
-        // This is optional and can be implemented later
-        break;
-        
-      case 'video':
-        // Get video metadata using ffmpeg
-        metadata.thumbnailUrl = await generateVideoThumbnail(filePath);
-        
-        // Get video dimensions and duration
-        const videoMetadata = await getVideoMetadata(filePath);
-        metadata.width = videoMetadata.width;
-        metadata.height = videoMetadata.height;
-        metadata.duration = videoMetadata.duration;
-        break;
-        
-      case 'audio':
-        // Get audio duration
-        const audioMetadata = await getAudioMetadata(filePath);
-        metadata.duration = audioMetadata.duration;
-        break;
+      case "image":
+        // Lấy kích thước hình ảnh (width, height, format, etc.)
+        const imageInfo = await sharp(filePath).metadata()
+        metadata.width = imageInfo.width // Chiều rộng (pixels)
+        metadata.height = imageInfo.height // Chiều cao (pixels)
+
+        // Tạo thumbnail cho hình ảnh nếu cần (tùy chọn)
+        // Có thể implement sau này nếu cần
+        break
+
+      case "video":
+        // Tạo thumbnail cho video và lấy URL
+        metadata.thumbnailUrl = await generateVideoThumbnail(filePath)
+
+        // Lấy thông tin kích thước và thời lượng video
+        const videoMetadata = await getVideoMetadata(filePath)
+        metadata.width = videoMetadata.width // Chiều rộng video (pixels)
+        metadata.height = videoMetadata.height // Chiều cao video (pixels)
+        metadata.duration = videoMetadata.duration // Thời lượng (giây)
+        break
+
+      case "audio":
+        // Lấy thời lượng âm thanh
+        const audioMetadata = await getAudioMetadata(filePath)
+        metadata.duration = audioMetadata.duration // Thời lượng (giây)
+        break
     }
-    
-    return metadata;
+
+    return metadata // Trả về object chứa metadata
   } catch (error) {
-    console.error('Error getting file metadata:', error);
-    return {};
+    console.error("Lỗi khi lấy metadata file:", error)
+    return {} // Trả về object rỗng nếu có lỗi
   }
-};
+}
 
 /**
- * Generate a thumbnail for a video
- * @param {string} videoPath - Path to the video file
- * @returns {Promise<string>} - Path to the thumbnail
+ * Tạo thumbnail cho video sử dụng FFmpeg
+ * Chức năng:
+ * - Chụp màn hình video tại vị trí 10% thời lượng
+ * - Lưu thumbnail kích thước 320x240
+ * - Tự động tạo thư mục thumbnails nếu chưa có
+ * - Trả về URL relative để truy cập thumbnail
+ * @param {string} videoPath - Đường dẫn đến file video
+ * @returns {Promise<string|null>} - URL thumbnail hoặc null nếu thất bại
  */
 const generateVideoThumbnail = async (videoPath) => {
   try {
-    // Extract filename without extension
-    const pathParts = videoPath.split('/');
-    const filename = pathParts[pathParts.length - 1].split('.')[0];
-    
-    // Create thumbnail path
-    const thumbnailPath = videoPath.replace(/videos\/([^/]+)$/, `thumbnails/${filename}.jpg`);
-    
-    // Create thumbnails directory if it doesn't exist
-    const thumbnailDir = thumbnailPath.substring(0, thumbnailPath.lastIndexOf('/'));
+    // Trích xuất tên file không bao gồm extension
+    const pathParts = videoPath.split("/")
+    const filename = pathParts[pathParts.length - 1].split(".")[0]
+
+    // Tạo đường dẫn cho thumbnail (thay videos/ bằng thumbnails/)
+    const thumbnailPath = videoPath.replace(
+      /videos\/([^/]+)$/,
+      `thumbnails/${filename}.jpg`
+    )
+
+    // Tạo thư mục thumbnails nếu chưa tồn tại
+    const thumbnailDir = thumbnailPath.substring(
+      0,
+      thumbnailPath.lastIndexOf("/")
+    )
     if (!fs.existsSync(thumbnailDir)) {
-      fs.mkdirSync(thumbnailDir, { recursive: true });
+      fs.mkdirSync(thumbnailDir, { recursive: true }) // Tạo thư mục đệ quy
     }
-    
-    // Generate thumbnail using ffmpeg
+
+    // Tạo thumbnail bằng FFmpeg
     return new Promise((resolve, reject) => {
       ffmpeg(videoPath)
         .screenshots({
-          timestamps: ['10%'],
-          filename: `${filename}.jpg`,
-          folder: thumbnailDir,
-          size: '320x240'
+          timestamps: ["10%"], // Chụp tại 10% thời lượng video
+          filename: `${filename}.jpg`, // Tên file thumbnail
+          folder: thumbnailDir, // Thư mục lưu thumbnail
+          size: "320x240", // Kích thước thumbnail
         })
-        .on('end', () => {
-          resolve(`/uploads/thumbnails/${filename}.jpg`);
+        .on("end", () => {
+          resolve(`/uploads/thumbnails/${filename}.jpg`) // Trả về URL relative
         })
-        .on('error', (err) => {
-          console.error('Error generating thumbnail:', err);
-          reject(err);
-        });
-    });
+        .on("error", (err) => {
+          console.error("Lỗi khi tạo thumbnail:", err)
+          reject(err)
+        })
+    })
   } catch (error) {
-    console.error('Error generating video thumbnail:', error);
-    return null;
+    console.error("Lỗi khi tạo thumbnail cho video:", error)
+    return null // Trả về null nếu thất bại
   }
-};
+}
 
 /**
- * Get video metadata
- * @param {string} videoPath - Path to the video file
- * @returns {Promise<Object>} - Video metadata
+ * Lấy metadata chi tiết của file video
+ * Chức năng:
+ * - Sử dụng FFprobe để phân tích file video
+ * - Trích xuất thông tin video stream (codec, resolution)
+ * - Lấy thời lượng từ format info
+ * - Xử lý lỗi an toàn
+ * @param {string} videoPath - Đường dẫn đến file video
+ * @returns {Promise<Object>} - Metadata video (width, height, duration)
  */
 const getVideoMetadata = async (videoPath) => {
   return new Promise((resolve, reject) => {
+    // Sử dụng FFprobe để lấy thông tin chi tiết video
     ffmpeg.ffprobe(videoPath, (err, metadata) => {
       if (err) {
-        return reject(err);
+        return reject(err) // Reject nếu có lỗi
       }
-      
-      const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
-      
+
+      // Tìm video stream trong các stream của file
+      const videoStream = metadata.streams.find(
+        (stream) => stream.codec_type === "video"
+      )
+
+      // Trả về thông tin cần thiết
       resolve({
-        width: videoStream ? videoStream.width : null,
-        height: videoStream ? videoStream.height : null,
-        duration: metadata.format.duration || null
-      });
-    });
-  });
-};
+        width: videoStream ? videoStream.width : null, // Chiều rộng (pixels)
+        height: videoStream ? videoStream.height : null, // Chiều cao (pixels)
+        duration: metadata.format.duration || null, // Thời lượng (giây)
+      })
+    })
+  })
+}
 
 /**
- * Get audio metadata
- * @param {string} audioPath - Path to the audio file
- * @returns {Promise<Object>} - Audio metadata
+ * Lấy metadata của file âm thanh
+ * Chức năng:
+ * - Sử dụng FFprobe để phân tích file audio
+ * - Trích xuất thời lượng từ format info
+ * - Có thể mở rộng để lấy thêm bitrate, sample rate, etc.
+ * @param {string} audioPath - Đường dẫn đến file âm thanh
+ * @returns {Promise<Object>} - Metadata âm thanh (duration)
  */
 const getAudioMetadata = async (audioPath) => {
   return new Promise((resolve, reject) => {
+    // Sử dụng FFprobe để lấy thông tin chi tiết âm thanh
     ffmpeg.ffprobe(audioPath, (err, metadata) => {
       if (err) {
-        return reject(err);
+        return reject(err) // Reject nếu có lỗi
       }
-      
-      resolve({
-        duration: metadata.format.duration || null
-      });
-    });
-  });
-};
 
+      // Trả về thông tin cần thiết (có thể mở rộng thêm)
+      resolve({
+        duration: metadata.format.duration || null, // Thời lượng (giây)
+      })
+    })
+  })
+}
+
+// Export các function để sử dụng ở các module khác
 module.exports = {
-  getMetadata,
-  generateVideoThumbnail,
-  getVideoMetadata,
-  getAudioMetadata
-};
+  getMetadata, // Lấy metadata tổng quát cho file
+  generateVideoThumbnail, // Tạo thumbnail cho video
+  getVideoMetadata, // Lấy metadata chi tiết video
+  getAudioMetadata, // Lấy metadata chi tiết âm thanh
+}

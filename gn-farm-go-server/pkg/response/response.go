@@ -1,3 +1,19 @@
+//####################################################################
+// RESPONSE PACKAGE - XỨ LÝ HTTP RESPONSE CHO GN FARM API
+// Package này cung cấp các hàm tiện ích để trả về HTTP response
+// theo chuẩn API RESTful với format JSON nhất quán
+//
+// Chức năng chính:
+// - Response thành công với data
+// - Response lỗi với error message
+// - Response với pagination
+// - Response với single item hoặc multiple items
+// - Mapping HTTP status codes chuẩn
+//
+// Tác giả: GN Farm Development Team
+// Phiên bản: 1.0
+//####################################################################
+
 package response
 
 import (
@@ -26,51 +42,67 @@ import (
 // 	ErrCodeInternalServerError: "Internal server error",
 // }
 
+// ===== CÁC CẤU TRÚC DỮU LIỆU RESPONSE =====
+
+// ResponseData - Cấu trúc chuẩn cho tất cả API response thành công
 type ResponseData struct {
-	Code    int         `json:"code"`    // status code
-	Message string      `json:"message"` // thong bao loi
-	Data    interface{} `json:"data"`    // du lai return
+	Code    int         `json:"code"`    // Mã trạng thái (200, 201, etc.)
+	Message string      `json:"message"` // Thông báo mô tả
+	Data    interface{} `json:"data"`    // Dữ liệu trả về (object, array, null)
 }
 
+// ErrorResponseData - Cấu trúc chuẩn cho API response lỗi
 type ErrorResponseData struct {
-	Code   int         `json:"code"`   // status code
-	Err    string      `json:"error"`  // thong bao loi
-	Detail interface{} `json:"detail"` // du lai return
+	Code   int         `json:"code"`   // Mã lỗi (400, 401, 500, etc.)
+	Err    string      `json:"error"`  // Thông báo lỗi ngắn gọn
+	Detail interface{} `json:"detail"` // Chi tiết lỗi (validation errors, stack trace)
 }
 
-// success response
+// ===== CÁC HÀM XỨ LÝ RESPONSE =====
+
+// SuccessResponse - Trả về response thành công với data
+// @param c *gin.Context - Gin context để trả về JSON
+// @param code int - Mã trạng thái thành công (thường là 200, 201)
+// @param data interface{} - Dữ liệu cần trả về
 func SuccessResponse(c *gin.Context, code int, data interface{}) {
 	c.JSON(http.StatusOK, ResponseData{
 		Code:    code,
-		Message: msg[code], // Uses 'msg' map from httpStatusCode.go
+		Message: msg[code], // Sử dụng message từ httpStatusCode.go
 		Data:    data,
 	})
 }
 
+// ErrorResponse - Trả về response lỗi với message tùy chỉnh
+// @param c *gin.Context - Gin context để trả về JSON  
+// @param code int - Mã lỗi (400, 401, 500, etc.)
+// @param message string - Thông báo lỗi (nếu rỗng sẽ dùng default)
 func ErrorResponse(c *gin.Context, code int, message string) {
 	if message == "" {
-		message = msg[code]
+		message = msg[code] // Sử dụng default message nếu không cung cấp
 	}
-	// map our code to HTTP status
+	
+	// Mapping mã lỗi nội bộ sang HTTP status code chuẩn
 	httpStatus := http.StatusOK
 	switch code {
 	case ErrCodeParamInvalid:
-		httpStatus = http.StatusBadRequest
+		httpStatus = http.StatusBadRequest      // 400
 	case ErrCodeUnauthorized:
-		httpStatus = http.StatusUnauthorized
+		httpStatus = http.StatusUnauthorized    // 401  
 	case ErrCodeForbidden:
-		httpStatus = http.StatusForbidden
+		httpStatus = http.StatusForbidden       // 403
 	case ErrCodeNotFound:
-		httpStatus = http.StatusNotFound
+		httpStatus = http.StatusNotFound        // 404
 	case ErrCodeInternalServerError:
-		httpStatus = http.StatusInternalServerError
+		httpStatus = http.StatusInternalServerError // 500
 	default:
+		// Nếu là HTTP status code hợp lệ thì dùng trực tiếp
 		if code >= 100 && code < 600 {
 			httpStatus = code
 		} else {
-			httpStatus = http.StatusBadRequest
+			httpStatus = http.StatusBadRequest  // Mặc định là 400
 		}
 	}
+	
 	c.JSON(httpStatus, ResponseData{
 		Code:    code,
 		Message: message,
