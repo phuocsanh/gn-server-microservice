@@ -96,6 +96,22 @@ type FileUpload struct {
 	DeletedAt           sql.NullTime          `json:"deletedAt"`
 }
 
+// Bảng theo dõi tồn kho theo từng lô hàng để hỗ trợ FIFO
+type InventoryBatch struct {
+	ID        int32          `json:"id"`
+	ProductID int32          `json:"productId"`
+	BatchCode sql.NullString `json:"batchCode"`
+	// Giá vốn của lô hàng này
+	UnitCostPrice    string `json:"unitCostPrice"`
+	OriginalQuantity int32  `json:"originalQuantity"`
+	// Số lượng còn lại của lô (giảm dần khi bán)
+	RemainingQuantity int32         `json:"remainingQuantity"`
+	ExpiryDate        sql.NullTime  `json:"expiryDate"`
+	ReceiptItemID     sql.NullInt32 `json:"receiptItemId"`
+	CreatedAt         time.Time     `json:"createdAt"`
+	UpdatedAt         time.Time     `json:"updatedAt"`
+}
+
 type InventoryHistory struct {
 	ID              int32          `json:"id"`
 	ProductID       int32          `json:"productId"`
@@ -140,6 +156,27 @@ type InventoryReceiptItem struct {
 	UpdatedAt   time.Time      `json:"updatedAt"`
 }
 
+// Bảng ghi lại tất cả giao dịch nhập/xuất kho để tính giá trung bình gia quyền
+type InventoryTransaction struct {
+	ID              int32  `json:"id"`
+	ProductID       int32  `json:"productId"`
+	TransactionType string `json:"transactionType"`
+	Quantity        int32  `json:"quantity"`
+	// Giá vốn đơn vị tại thời điểm giao dịch
+	UnitCostPrice     string `json:"unitCostPrice"`
+	TotalCostValue    string `json:"totalCostValue"`
+	RemainingQuantity int32  `json:"remainingQuantity"`
+	// Giá vốn trung bình mới sau khi thực hiện giao dịch này
+	NewAverageCost  string         `json:"newAverageCost"`
+	ReceiptItemID   sql.NullInt32  `json:"receiptItemId"`
+	ReferenceType   sql.NullString `json:"referenceType"`
+	ReferenceID     sql.NullInt32  `json:"referenceId"`
+	Notes           sql.NullString `json:"notes"`
+	CreatedByUserID int32          `json:"createdByUserId"`
+	CreatedAt       time.Time      `json:"createdAt"`
+	UpdatedAt       time.Time      `json:"updatedAt"`
+}
+
 type Product struct {
 	ID                     int32                 `json:"id"`
 	ProductName            string                `json:"productName"`
@@ -163,6 +200,10 @@ type Product struct {
 	IsPublished            sql.NullBool          `json:"isPublished"`
 	CreatedAt              time.Time             `json:"createdAt"`
 	UpdatedAt              time.Time             `json:"updatedAt"`
+	// Giá vốn trung bình gia quyền của sản phẩm
+	AverageCostPrice string `json:"averageCostPrice"`
+	// Phần trăm lợi nhuận mong muốn (VD: 15.00 = 15%)
+	ProfitMarginPercent string `json:"profitMarginPercent"`
 }
 
 type ProductSubtype struct {

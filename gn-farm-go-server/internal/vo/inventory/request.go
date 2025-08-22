@@ -68,3 +68,43 @@ type ApproveReceiptRequestOld struct {
 	CheckedByUserID int32   `json:"checkedByUserId" validate:"required,min=1"`
 	Notes           *string `json:"notes"`
 }
+
+// StockInRequest yêu cầu nhập kho với tính giá trung bình gia quyền
+type StockInRequest struct {
+	ProductID       int32      `json:"productId" validate:"required,min=1"`
+	Quantity        int32      `json:"quantity" validate:"required,min=1"`
+	UnitCostPrice   string     `json:"unitCostPrice" validate:"required"`
+	BatchCode       *string    `json:"batchCode" validate:"omitempty,max=100"`
+	ExpiryDate      *time.Time `json:"expiryDate"`
+	ReceiptItemID   *int32     `json:"receiptItemId"`
+	ReferenceType   *string    `json:"referenceType" validate:"omitempty,max=50"`
+	ReferenceID     *int32     `json:"referenceId"`
+	Notes           *string    `json:"notes"`
+	CreatedByUserID int32      `json:"createdByUserId" validate:"required,min=1"`
+}
+
+// StockOutRequest yêu cầu xuất kho theo FIFO
+type StockOutRequest struct {
+	ProductID       int32   `json:"productId" validate:"required,min=1"`
+	Quantity        int32   `json:"quantity" validate:"required,min=1"`
+	ReferenceType   *string `json:"referenceType" validate:"omitempty,max=50"`
+	ReferenceID     *int32  `json:"referenceId"`
+	Notes           *string `json:"notes"`
+	CreatedByUserID int32   `json:"createdByUserId" validate:"required,min=1"`
+}
+
+// TransactionHistoryRequest yêu cầu lấy lịch sử giao dịch kho
+type TransactionHistoryRequest struct {
+	TransactionType *string    `json:"transactionType" form:"transactionType" validate:"omitempty,oneof=IN OUT"`
+	FromDate        *time.Time `json:"fromDate" form:"fromDate"`
+	ToDate          *time.Time `json:"toDate" form:"toDate"`
+	Page            int32      `json:"page" form:"page" validate:"min=1"`
+	Limit           int32      `json:"limit" form:"limit" validate:"min=1,max=100"`
+}
+
+// InventoryValueReportRequest yêu cầu báo cáo giá trị tồn kho
+type InventoryValueReportRequest struct {
+	ProductName *string `json:"productName" form:"productName"`
+	Page        int32   `json:"page" form:"page" validate:"min=1"`
+	Limit       int32   `json:"limit" form:"limit" validate:"min=1,max=100"`
+}

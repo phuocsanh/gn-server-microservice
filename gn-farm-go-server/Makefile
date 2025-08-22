@@ -1,5 +1,5 @@
 # Database configuration
-GOOSE_DBSTRING ?= "postgres://postgres:123456@localhost:5432/GO_GN_FARM?sslmode=disable"
+GOOSE_DBSTRING ?= "postgres://postgres:postgres@localhost:5432/GO_GN_FARM?sslmode=disable"
 GOOSE_MIGRATION_DIR ?= sql/schema
 GOOSE_DRIVER ?= postgres
 
@@ -54,11 +54,11 @@ test_all:
 # Setup test database
 test_db_setup:
 	@echo "Setting up test database..."
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:123456@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) up
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:postgres@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) up
 
 test_db_reset:
 	@echo "Resetting test database..."
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:123456@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) reset
-	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:123456@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) up
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:postgres@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) reset
+	@GOOSE_DRIVER=$(GOOSE_DRIVER) GOOSE_DBSTRING="postgres://postgres:postgres@localhost:5432/GO_GN_FARM_TEST?sslmode=disable" goose -dir=$(GOOSE_MIGRATION_DIR) up
 
 .PHONY: dev docker_up docker_down docker_build migrate_up migrate_down migrate_reset migrate_create sqlgen swag test test_coverage test_unit test_integration test_db_setup test_db_reset

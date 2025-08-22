@@ -28,6 +28,9 @@ type IInventoryService interface {
 
 	// Lịch sử tồn kho
 	GetInventoryHistory(ctx context.Context, req *inventoryVO.GetInventoryHistoryRequest) (*inventoryVO.GetInventoryHistoryResponse, *response.ResponseData, error)
+
+	// Nhập kho trực tiếp với tính giá trung bình gia quyền
+	ProcessStockIn(ctx context.Context, req *inventoryVO.StockInRequest) (*inventoryVO.StockInResponse, *response.ResponseData, error)
 }
 
 var (

@@ -86,7 +86,7 @@ import (
     "log"
     
     "github.com/gn-farm-go-server/internal/config"
-    "github.com/gn-farm-go-server/internal/router"
+    "github.com/gn-farm-go-server/internal/routers"
 )
 
 func main() {

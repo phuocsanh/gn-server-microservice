@@ -13,12 +13,18 @@ import (
 )
 
 var inventorySet = wire.NewSet(
+	inventoryImpl.NewInventoryTransactionService,
 	inventoryImpl.NewInventoryService,
 	inventory.NewInventoryController,
 )
 
 func InitializeInventoryService(db *database.Queries) service.IInventoryService {
 	wire.Build(inventorySet)
+	return nil
+}
+
+func InitializeInventoryTransactionService(db *database.Queries) service.IInventoryTransactionService {
+	wire.Build(inventoryImpl.NewInventoryTransactionService)
 	return nil
 }
 

@@ -12,12 +12,14 @@ func (pr *ProductRouter) InitProductRouter(Router *gin.RouterGroup) {
 	// Public routes
 	productRouterPublic := Router.Group("/product")
 	{
-		// Product routes
+		// Public product endpoints
 		productRouterPublic.GET("/search", product.Product.SearchProducts)
 		productRouterPublic.GET("/filter", product.Product.FilterProducts)
 		productRouterPublic.GET("/stats", product.Product.GetProductStats)
 		productRouterPublic.GET("/:id", product.Product.GetProduct)
 		productRouterPublic.GET("", product.Product.ListProducts)
+		// Public endpoint for testing - create product
+		productRouterPublic.POST("", product.Product.CreateProduct)
 
 		// Các route cho Mushroom, Vegetable, và Bonsai đã được loại bỏ
 		// vì chúng nên được xử lý như các product_type thông qua ProductTypeController

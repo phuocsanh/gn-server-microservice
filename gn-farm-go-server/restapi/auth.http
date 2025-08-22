@@ -34,7 +34,7 @@ POST http://localhost:8002/v1/user/update-pass-register
 Content-Type: application/json
 
 {
-  "userToken": "{{verify_token}}",
+  "userToken": "7122d393a223ec4ccd86cc620bb1461a3b2c6844fb23c9b7641bd893563ef3d9",
   "userPassword": "12345678"
 }
 

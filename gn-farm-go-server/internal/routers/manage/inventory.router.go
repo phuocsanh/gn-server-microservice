@@ -11,6 +11,12 @@ type InventoryManageRouter struct{}
 
 func (ir *InventoryManageRouter) InitInventoryManageRouter(Router *gin.RouterGroup) {
 	
+	// Public routes for testing
+	inventoryRouterPublic := Router.Group("/inventory")
+	{
+		// Public endpoint for testing stock-in functionality
+		inventoryRouterPublic.POST("/stock-in", inventory.Inventory.ProcessStockIn)
+	}
 
 	inventoryRouterPrivate := Router.Group("/manage/inventory")
 	inventoryRouterPrivate.Use(middlewares.AuthenMiddleware())
@@ -32,6 +38,9 @@ func (ir *InventoryManageRouter) InitInventoryManageRouter(Router *gin.RouterGro
 		inventoryRouterPrivate.GET("/receipt/:id/items", inventory.Inventory.GetInventoryReceiptItems)
 		inventoryRouterPrivate.PUT("/receipt/item/:id", inventory.Inventory.UpdateInventoryReceiptItem)
 		inventoryRouterPrivate.DELETE("/receipt/item/:id", inventory.Inventory.DeleteInventoryReceiptItem)
+
+		// Inventory Stock Management routes
+		inventoryRouterPrivate.POST("/stock-in", inventory.Inventory.ProcessStockIn)
 
 		// Inventory History routes
 		inventoryRouterPrivate.GET("/product-history", inventory.Inventory.GetInventoryHistory)

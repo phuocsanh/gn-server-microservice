@@ -477,6 +477,42 @@ func (c *InventoryController) DeleteInventoryReceiptItem(ctx *gin.Context) {
 	response.SuccessResponse(ctx, response.ErrCodeSuccess, "Xóa sản phẩm khỏi phiếu nhập thành công")
 }
 
+// ProcessStockIn xử lý nhập kho với tính giá trung bình gia quyền
+// @Summary      Nhập kho sản phẩm
+// @Description  Nhập kho sản phẩm với tính toán giá trung bình gia quyền và cập nhật tồn kho
+// @Tags         inventory management
+// @Accept       json
+// @Produce      json
+// @Param        payload body inventoryVO.StockInRequest true "Thông tin nhập kho"
+// @Success      201  {object}  response.ResponseData
+// @Failure      400  {object}  response.ErrorResponseData
+// @Failure      500  {object}  response.ErrorResponseData
+// @Router       /manage/inventory/stock-in [post]
+func (c *InventoryController) ProcessStockIn(ctx *gin.Context) {
+	var req inventoryVO.StockInRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
+		return
+	}
+
+	// Lấy userID từ context (JWT token)
+	userID := int32(1) // TODO: Lấy từ JWT token trong context
+	req.CreatedByUserID = userID
+
+	result, responseData, err := c.inventoryService.ProcessStockIn(ctx, &req)
+	if err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeInternalServerError, err.Error())
+		return
+	}
+
+	if responseData != nil {
+		response.ErrorResponse(ctx, responseData.Code, responseData.Message)
+		return
+	}
+
+	response.SuccessResponse(ctx, response.ErrCodeSuccess, result)
+}
+
 // GetInventoryHistory lấy lịch sử tồn kho
 // @Summary      Lấy lịch sử tồn kho
 // @Description  Lấy lịch sử thay đổi tồn kho của sản phẩm

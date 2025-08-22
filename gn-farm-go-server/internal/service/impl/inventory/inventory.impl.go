@@ -14,11 +14,13 @@ import (
 
 type inventoryService struct {
 	db *database.Queries
+	inventoryTransactionService service.IInventoryTransactionService
 }
 
-func NewInventoryService(db *database.Queries) service.IInventoryService {
+func NewInventoryService(db *database.Queries, inventoryTransactionService service.IInventoryTransactionService) service.IInventoryService {
 	return &inventoryService{
 		db: db,
+		inventoryTransactionService: inventoryTransactionService,
 	}
 }
 
@@ -297,6 +299,12 @@ func (s *inventoryService) GetInventoryHistory(ctx context.Context, req *invento
 	}
 	
 	return result, nil, nil
+}
+
+// ProcessStockIn - Xử lý nhập kho với tính toán giá trung bình gia quyền
+// Delegate call tới inventoryTransactionService
+func (s *inventoryService) ProcessStockIn(ctx context.Context, req *inventoryVO.StockInRequest) (*inventoryVO.StockInResponse, *response.ResponseData, error) {
+	return s.inventoryTransactionService.ProcessStockIn(ctx, req)
 }
 
 // Helper functions

@@ -1,8 +1,9 @@
-package router
+package routers
 
 import (
-	"github.com/gin-gonic/gin"
 	"gn-farm-go-server/internal/service/file_tracking"
+
+	"github.com/gin-gonic/gin"
 )
 
 // SetupFileTrackingRoutes sets up file tracking related routes

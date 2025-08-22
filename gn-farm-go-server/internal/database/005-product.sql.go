@@ -50,7 +50,7 @@ INSERT INTO products (
     updated_at
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW(), NOW()
-) RETURNING id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at
+) RETURNING id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent
 `
 
 type CreateProductParams struct {
@@ -121,6 +121,8 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AverageCostPrice,
+		&i.ProfitMarginPercent,
 	)
 	return i, err
 }
@@ -135,7 +137,7 @@ func (q *Queries) DeleteProduct(ctx context.Context, id int32) error {
 }
 
 const filterProducts = `-- name: FilterProducts :many
-SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at FROM products
+SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent FROM products
 WHERE is_published = true
 AND (
     CASE
@@ -243,6 +245,8 @@ func (q *Queries) FilterProducts(ctx context.Context, arg FilterProductsParams) 
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AverageCostPrice,
+			&i.ProfitMarginPercent,
 		); err != nil {
 			return nil, err
 		}
@@ -258,7 +262,7 @@ func (q *Queries) FilterProducts(ctx context.Context, arg FilterProductsParams) 
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at FROM products WHERE id = $1
+SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent FROM products WHERE id = $1
 `
 
 func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
@@ -287,6 +291,8 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AverageCostPrice,
+		&i.ProfitMarginPercent,
 	)
 	return i, err
 }
@@ -336,7 +342,7 @@ func (q *Queries) GetProductStats(ctx context.Context) (GetProductStatsRow, erro
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at FROM products
+SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent FROM products
 WHERE is_published = true
 ORDER BY created_at DESC
 LIMIT CASE WHEN $1 = 0 THEN NULL ELSE $1 END
@@ -380,6 +386,8 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AverageCostPrice,
+			&i.ProfitMarginPercent,
 		); err != nil {
 			return nil, err
 		}
@@ -395,7 +403,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 }
 
 const listProductsWithFilter = `-- name: ListProductsWithFilter :many
-SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at FROM products
+SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent FROM products
 WHERE is_published = true
 AND (
     CASE
@@ -458,6 +466,8 @@ func (q *Queries) ListProductsWithFilter(ctx context.Context, arg ListProductsWi
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AverageCostPrice,
+			&i.ProfitMarginPercent,
 		); err != nil {
 			return nil, err
 		}
@@ -473,7 +483,7 @@ func (q *Queries) ListProductsWithFilter(ctx context.Context, arg ListProductsWi
 }
 
 const searchProducts = `-- name: SearchProducts :many
-SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at FROM products
+SELECT id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent FROM products
 WHERE is_published = true
 AND (
     product_name ILIKE '%' || $1 || '%'
@@ -522,6 +532,8 @@ func (q *Queries) SearchProducts(ctx context.Context, arg SearchProductsParams) 
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AverageCostPrice,
+			&i.ProfitMarginPercent,
 		); err != nil {
 			return nil, err
 		}
@@ -560,7 +572,7 @@ SET
     is_published = $20,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at
+RETURNING id, product_name, product_price, product_status, product_thumb, product_pictures, product_videos, product_ratings_average, product_variations, product_description, product_slug, product_quantity, product_type, sub_product_type, discount, product_discounted_price, product_selled, product_attributes, is_draft, is_published, created_at, updated_at, average_cost_price, profit_margin_percent
 `
 
 type UpdateProductParams struct {
@@ -633,6 +645,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.AverageCostPrice,
+		&i.ProfitMarginPercent,
 	)
 	return i, err
 }

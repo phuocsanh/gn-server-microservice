@@ -21,12 +21,19 @@ import (
 // Injectors from inventory.wire.go:
 
 func InitializeInventoryService(db *database.Queries) service.IInventoryService {
-	iInventoryService := inventory.NewInventoryService(db)
+	iInventoryTransactionService := inventory.NewInventoryTransactionService(db)
+	iInventoryService := inventory.NewInventoryService(db, iInventoryTransactionService)
 	return iInventoryService
 }
 
+func InitializeInventoryTransactionService(db *database.Queries) service.IInventoryTransactionService {
+	iInventoryTransactionService := inventory.NewInventoryTransactionService(db)
+	return iInventoryTransactionService
+}
+
 func InitializeInventoryController(db *database.Queries) *inventory2.InventoryController {
-	iInventoryService := inventory.NewInventoryService(db)
+	iInventoryTransactionService := inventory.NewInventoryTransactionService(db)
+	iInventoryService := inventory.NewInventoryService(db, iInventoryTransactionService)
 	inventoryController := inventory2.NewInventoryController(iInventoryService)
 	return inventoryController
 }
@@ -85,7 +92,7 @@ func InitUserAuthService() (service.IUserAuth, error) {
 
 // inventory.wire.go:
 
-var inventorySet = wire.NewSet(inventory.NewInventoryService, inventory2.NewInventoryController)
+var inventorySet = wire.NewSet(inventory.NewInventoryTransactionService, inventory.NewInventoryService, inventory2.NewInventoryController)
 
 // product-type.wire.go:
 
