@@ -51,6 +51,19 @@ func InitRouter(
 			manageRouterGroup.InventoryManageRouter.InitInventoryManageRouter(v1)
 			log.Println("INIT: Đã khởi tạo inventory router thành công")
 		}()
+		
+		// Khởi tạo sales router với xử lý lỗi
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("Lỗi khi khởi tạo sales router: %v", r)
+				}
+			}()
+			
+			log.Println("INIT: Đang khởi tạo sales router...")
+			manageRouterGroup.SalesManageRouter.InitSalesManageRouter(v1)
+			log.Println("INIT: Đã khởi tạo sales router thành công")
+		}()
 
 		// Khởi tạo upload router
 		uploadRouterGroup := UploadRouterGroup

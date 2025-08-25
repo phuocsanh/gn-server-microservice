@@ -3,7 +3,7 @@ POST http://localhost:8002/v1/user/register
 Content-Type: application/json
 
 {
-  "verifyKey": "phuocsanhtps@gmail.com",
+  "verifyKey": "phuocsanhtps1@gmail.com",
   "verifyType": 1,
   "verifyPurpose": "TEST_USER"
 }
@@ -19,7 +19,7 @@ POST http://localhost:8002/v1/user/verify-otp
 Content-Type: application/json
 
 {
-  "verifyKey": "phuocsanhtps@gmail.com",
+  "verifyKey": "phuocsanhtps1@gmail.com",
   "verifyCode": "123456"
 }
 
@@ -34,7 +34,7 @@ POST http://localhost:8002/v1/user/update-pass-register
 Content-Type: application/json
 
 {
-  "userToken": "7122d393a223ec4ccd86cc620bb1461a3b2c6844fb23c9b7641bd893563ef3d9",
+  "userToken": "ccaa0e21e42e1d46690c02f4cef5ba26b69a1d9eec4596676717579615ee5cf4",
   "userPassword": "12345678"
 }
 

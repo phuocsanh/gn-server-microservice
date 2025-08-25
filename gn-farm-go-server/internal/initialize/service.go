@@ -76,4 +76,8 @@ func InitServiceInterface() {
 		cloudinaryService.SetFileTrackingService(adapter)
 		global.Logger.Info("File tracking service injected into upload service")
 	}
+
+	// ===== KHỞI TẠO SALES SERVICE =====
+	// Khởi tạo service quản lý bán hàng
+	InitSalesService()
 }

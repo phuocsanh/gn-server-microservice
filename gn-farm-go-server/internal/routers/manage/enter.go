@@ -63,4 +63,10 @@ type ManageRouterGroup struct {
 	// Chức năng: nhập/xuất kho, quản lý tồn kho, báo cáo analytics
 	// Endpoints: GET/POST/PUT /admin/inventory/*
 	InventoryManageRouter
+	
+	// ===== SALES MANAGEMENT ROUTER =====
+	// SalesManageRouter - Router quản lý bán hàng cho admin
+	// Chức năng: tạo phiếu bán hàng, xử lý giao dịch, báo cáo doanh thu
+	// Endpoints: GET/POST/PUT/DELETE /admin/sales/*
+	SalesManageRouter
 }

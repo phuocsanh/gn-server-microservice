@@ -118,6 +118,7 @@ func InitRouter() *gin.Engine {
 		manageRouter.InitAdminRouter(v1)          // Quản lý admin functions
 		manageRouter.InitInventoryManageRouter(v1) // Quản lý inventory/kho
 		manageRouter.InitProductManageRouter(v1)   // Quản lý sản phẩm
+		manageRouter.InitSalesManageRouter(v1)     // Quản lý bán hàng
 
 		// Upload routes - Upload files và quản lý media
 		uploadRouter.InitRouter(v1)

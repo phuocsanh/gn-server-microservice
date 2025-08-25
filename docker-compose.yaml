@@ -33,7 +33,7 @@ version: "3.8"
 services:
   # ===== DATABASE SERVICES - CÁC DỊCH VỤ CƠ SỜ DỮU LIỆU =====
   # PostgreSQL - Cơ sở dữ liệu chính cho backend Go server
-  postgres:
+  postgres_gn_farm:
     image: postgres:15 # Sử dụng PostgreSQL phiên bản 15 (stable LTS)
     container_name: postgres_gn_farm # Tên container cho dễ quản lý
     environment:
@@ -41,7 +41,7 @@ services:
       POSTGRES_PASSWORD: postgres # Password (nên thay đổi trong production)
       POSTGRES_DB: GO_GN_FARM # Database chính cho ứng dụng
     ports:
-      - "5432:5432" # Expose port 5432 ra ngoài
+      - "5433:5432" # Expose port 5432 ra ngoài thành 5433 để tránh xung đột
     volumes:
       - postgres_data:/var/lib/postgresql/data # Lưu dữ liệu vào volume
     networks:
@@ -54,7 +54,7 @@ services:
 
   # Redis - Cache và session store cho real-time features
 
-  redis:
+  redis_gn_farm:
     image: redis:7.4 # Redis 7.4 cho performance tốt nhất
     container_name: redis_gn_farm # Tên container
     ports:
@@ -70,7 +70,7 @@ services:
       retries: 3
 
   # MongoDB - Lưu trữ dữ liệu chat, tin nhắn real-time
-  mongodb:
+  mongo_gn_farm:
     image: mongo:6.0 # MongoDB 6.0 stable
     container_name: mongo_gn_farm
     ports:
@@ -163,9 +163,9 @@ services:
         "-polling",
       ]
     depends_on:
-      postgres:
+      postgres_gn_farm:
         condition: service_healthy
-      redis:
+      redis_gn_farm:
         condition: service_healthy
       broker:
         condition: service_started
@@ -198,11 +198,11 @@ services:
       - chat_node_modules:/app/node_modules
     working_dir: /app
     depends_on:
-      postgres:
+      postgres_gn_farm:
         condition: service_healthy
-      redis:
+      redis_gn_farm:
         condition: service_healthy
-      mongodb:
+      mongo_gn_farm:
         condition: service_healthy
     networks:
       - gn_farm_network

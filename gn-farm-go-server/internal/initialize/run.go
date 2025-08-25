@@ -60,6 +60,7 @@ func Run() *gin.Engine {
 	InitServiceInterface() // Khởi tạo các service interface
 	InitProductService()   // Service quản lý sản phẩm (Mushroom, Vegetable, Bonsai)
 	InitInventoryService() // Service quản lý tồn kho và FIFO
+	InitSalesService()     // Service quản lý bán hàng và phiếu bán
 	
 	// Khởi tạo các external services
 	InitRedis()         // Kết nối Redis cache cho session và caching

@@ -11,10 +11,12 @@ import (
 	"github.com/google/wire"
 	"gn-farm-go-server/global"
 	inventory2 "gn-farm-go-server/internal/controller/inventory"
+	sales2 "gn-farm-go-server/internal/controller/sales"
 	"gn-farm-go-server/internal/database"
 	"gn-farm-go-server/internal/service"
 	"gn-farm-go-server/internal/service/impl/inventory"
 	"gn-farm-go-server/internal/service/impl/product"
+	"gn-farm-go-server/internal/service/impl/sales"
 	"gn-farm-go-server/internal/service/impl/user"
 )
 
@@ -77,6 +79,19 @@ func InitializeBonsaiService(db *database.Queries) service.BonsaiService {
 	return bonsaiService
 }
 
+// Injectors from sales.wire.go:
+
+func InitializeSalesService(db *database.Queries) service.ISalesService {
+	iSalesService := sales.NewSalesService(db)
+	return iSalesService
+}
+
+func InitializeSalesController(db *database.Queries) *sales2.SalesController {
+	iSalesService := sales.NewSalesService(db)
+	salesController := sales2.NewSalesController(iSalesService)
+	return salesController
+}
+
 // Injectors from user.wire.go:
 
 // Initialize only the necessary dependencies for UserAuth service registration
@@ -101,6 +116,10 @@ var productTypeSet = wire.NewSet(product.NewProductTypeService, product.NewProdu
 // product.wire.go:
 
 var productSet = wire.NewSet(product.NewProductServiceImpl, product.NewMushroomService, product.NewVegetableService, product.NewBonsaiService)
+
+// sales.wire.go:
+
+var salesSet = wire.NewSet(sales.NewSalesService, sales2.NewSalesController)
 
 // user.wire.go:
 
